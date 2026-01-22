@@ -95,12 +95,23 @@
         /* Bottom Nav Active State */
         .nav-item.active { color: #00D745; }
         .nav-item.active i { transform: translateY(-2px); }
+
+        /* Mobile View Transitions */
+        #sidebar-container {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-hidden {
+            transform: translateY(100%);
+        }
+        .sidebar-visible {
+            transform: translateY(0);
+        }
     </style>
 </head>
-<body class="h-[100dvh] w-screen overflow-hidden flex flex-col md:flex-row bg-glr-dark">
+<body class="h-[100dvh] w-screen overflow-hidden flex flex-col md:flex-row bg-glr-dark relative">
 
-    <!-- MAP CONTAINER -->
-    <div id="map-container" class="w-full h-[35vh] md:h-full md:flex-1 bg-[#111] order-1 md:order-2 z-10 relative border-l border-glr-border shrink-0">
+    <!-- MAP CONTAINER (Now Fullscreen on Mobile) -->
+    <div id="map-container" class="absolute inset-0 md:relative md:w-full md:h-full md:flex-1 bg-[#111] order-1 md:order-2 z-0 md:z-10 md:border-l border-glr-border shrink-0">
         <div id="map" class="w-full h-full opacity-90 hover:opacity-100 transition-opacity duration-700"></div>
         <div class="hidden md:flex absolute top-6 right-6 z-[400] gap-3">
              <div class="bg-glr-surface border border-glr-border px-4 py-2 rounded-sm text-xs font-mono text-gray-400 flex items-center gap-2">
@@ -109,12 +120,17 @@
         </div>
     </div>
 
-    <!-- SIDEBAR / LIST CONTAINER -->
-    <div class="flex flex-col w-full md:w-[450px] lg:w-[480px] flex-1 md:h-full bg-glr-dark z-30 shadow-2xl md:shadow-none md:border-r border-glr-border order-2 md:order-1 relative min-h-0">
+    <!-- SIDEBAR / LIST CONTAINER (Overlay on Mobile, Left Side on Desktop) -->
+    <div id="sidebar-container" class="absolute inset-x-0 bottom-0 top-[15vh] md:static md:inset-auto md:h-full flex flex-col w-full md:w-[450px] lg:w-[480px] bg-glr-dark z-20 shadow-2xl md:shadow-none md:border-r border-glr-border order-2 md:order-1 transition-transform duration-300 rounded-t-3xl md:rounded-none sidebar-visible">
         
+        <!-- Mobile Drag Handle -->
+        <div class="md:hidden w-full pt-3 pb-1 bg-glr-dark rounded-t-3xl shrink-0 flex justify-center cursor-pointer" onclick="toggleMobileView()">
+             <div class="w-12 h-1.5 bg-gray-700 rounded-full"></div>
+        </div>
+
         <!-- HEADER & CATEGORIES -->
-        <div class="bg-glr-dark shrink-0 z-20 pb-4 shadow-md border-b border-glr-border">
-            <div class="px-5 pt-4 md:pt-6 pb-2 md:pb-4 flex justify-between items-end">
+        <div class="bg-glr-dark shrink-0 z-20 pb-4 shadow-md border-b border-glr-border px-5">
+            <div class="pt-2 md:pt-6 pb-2 md:pb-4 flex justify-between items-end">
                 <div>
                     <p class="text-[10px] font-mono text-glr-neon font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full bg-glr-neon animate-pulse"></span>
@@ -125,7 +141,7 @@
             </div>
 
             <!-- Categories -->
-            <div class="mt-2 flex overflow-x-auto no-scrollbar px-5 gap-3 pb-2">
+            <div class="mt-2 flex overflow-x-auto no-scrollbar gap-3 pb-2">
                 <div onclick="filterSpots('all')" class="category-btn active flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
                     <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon"><i class="fas fa-globe"></i></div>
                     <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">Alles</span>
@@ -157,7 +173,7 @@
         </div>
 
         <!-- SCROLLABLE LIST -->
-        <div class="flex-1 overflow-y-auto no-scrollbar desktop-scroll bg-glr-dark pb-20 md:pb-0 relative">
+        <div class="flex-1 overflow-y-auto no-scrollbar desktop-scroll bg-glr-dark pb-24 md:pb-0 relative">
             <div class="absolute inset-0 pointer-events-none z-0 opacity-[0.02]" style="background: repeating-linear-gradient(0deg, transparent, transparent 1px, #00D745 2px);"></div>
 
             <div class="px-5 py-6 relative z-10">
@@ -180,21 +196,21 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- MOBILE BOTTOM NAV -->
-        <div class="md:hidden absolute bottom-0 w-full bg-glr-surface/95 backdrop-blur border-t border-glr-border py-3 px-6 flex justify-between items-center z-40 pb-safe">
-            <div onclick="switchTab(this, 'gids')" class="nav-item active flex flex-col items-center text-glr-neon cursor-pointer transition-all">
-                <i class="fas fa-globe text-lg mb-1 transition-transform"></i>
-                <span class="text-[10px] font-bold font-mono uppercase">Gids</span>
-            </div>
-            <div onclick="switchTab(this, 'favoriet')" class="nav-item flex flex-col items-center text-gray-500 cursor-pointer transition-all hover:text-white">
-                <i class="fas fa-heart text-lg mb-1 transition-transform"></i>
-                <span class="text-[10px] font-bold font-mono uppercase">Favoriet</span>
-            </div>
-            <div onclick="switchTab(this, 'kaart')" class="nav-item flex flex-col items-center text-gray-500 cursor-pointer transition-all hover:text-white">
-                <i class="fas fa-map text-lg mb-1 transition-transform"></i>
-                <span class="text-[10px] font-bold font-mono uppercase">Kaart</span>
-            </div>
+    <!-- MOBILE BOTTOM NAV (Floating above everything) -->
+    <div class="md:hidden fixed bottom-0 w-full bg-glr-surface/95 backdrop-blur border-t border-glr-border py-3 px-6 flex justify-between items-center z-50 pb-safe">
+        <div onclick="switchTab(this, 'gids')" class="nav-item active flex flex-col items-center text-glr-neon cursor-pointer transition-all">
+            <i class="fas fa-list text-lg mb-1 transition-transform"></i>
+            <span class="text-[10px] font-bold font-mono uppercase">Lijst</span>
+        </div>
+        <div onclick="switchTab(this, 'kaart')" class="nav-item flex flex-col items-center text-gray-500 cursor-pointer transition-all hover:text-white">
+            <i class="fas fa-map text-lg mb-1 transition-transform"></i>
+            <span class="text-[10px] font-bold font-mono uppercase">Kaart</span>
+        </div>
+        <div onclick="switchTab(this, 'favoriet')" class="nav-item flex flex-col items-center text-gray-500 cursor-pointer transition-all hover:text-white">
+            <i class="fas fa-heart text-lg mb-1 transition-transform"></i>
+            <span class="text-[10px] font-bold font-mono uppercase">Favoriet</span>
         </div>
     </div>
 
@@ -419,20 +435,58 @@
             el.classList.add('active', 'text-glr-neon');
             el.classList.remove('text-gray-500');
 
-            // Simple tab logic
             if (tabName === 'gids') {
                 filterSpots('all');
                 document.getElementById('list-title').textContent = "Hotspots";
+                // Show Sidebar
+                const sidebar = document.getElementById('sidebar-container');
+                sidebar.classList.remove('sidebar-hidden');
+                sidebar.classList.add('sidebar-visible');
             } else if (tabName === 'favoriet') {
-                // For demo: just filter random items or show "Coming Soon"
-                // Ideally this would filter by saved IDs. Let's just show a few.
-                // Since we don't have persistence, we'll just show the first 2 as a demo.
                 renderList(spots.slice(0, 2));
                 document.getElementById('list-title').textContent = "Favorieten";
+                // Show Sidebar
+                const sidebar = document.getElementById('sidebar-container');
+                sidebar.classList.remove('sidebar-hidden');
+                sidebar.classList.add('sidebar-visible');
             } else if (tabName === 'kaart') {
-                // Scroll to top to see map
-                document.getElementById('map-container').scrollIntoView({behavior: 'smooth'});
+                // Hide Sidebar to show Map
+                const sidebar = document.getElementById('sidebar-container');
+                sidebar.classList.remove('sidebar-visible');
+                sidebar.classList.add('sidebar-hidden');
             }
+        }
+        
+        function toggleMobileView() {
+             const sidebar = document.getElementById('sidebar-container');
+             if(sidebar.classList.contains('sidebar-visible')){
+                 sidebar.classList.remove('sidebar-visible');
+                 sidebar.classList.add('sidebar-hidden');
+                 // Update Nav Active State manually to Map
+                 document.querySelectorAll('.nav-item').forEach(btn => {
+                    btn.classList.remove('active', 'text-glr-neon');
+                    btn.classList.add('text-gray-500');
+                 });
+                 // Find the 'kaart' button and activate it (a bit hacky but works for this simple case)
+                 const mapBtn = document.querySelector("div[onclick=\"switchTab(this, 'kaart')\"]");
+                 if(mapBtn) {
+                     mapBtn.classList.add('active', 'text-glr-neon');
+                     mapBtn.classList.remove('text-gray-500');
+                 }
+             } else {
+                 sidebar.classList.remove('sidebar-hidden');
+                 sidebar.classList.add('sidebar-visible');
+                 // Default back to Gids active state
+                 document.querySelectorAll('.nav-item').forEach(btn => {
+                    btn.classList.remove('active', 'text-glr-neon');
+                    btn.classList.add('text-gray-500');
+                 });
+                 const guideBtn = document.querySelector("div[onclick=\"switchTab(this, 'gids')\"]");
+                 if(guideBtn) {
+                     guideBtn.classList.add('active', 'text-glr-neon');
+                     guideBtn.classList.remove('text-gray-500');
+                 }
+             }
         }
 
         init();
