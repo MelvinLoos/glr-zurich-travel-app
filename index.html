@@ -2,8 +2,20 @@
 <html lang="nl" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>GLR Gids: Zürich</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0F0F0F">
+    <meta name="application-name" content="GLR Zürich">
+    <meta name="description" content="De ultieme gids voor GLR studenten in Zürich.">
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,6 +33,10 @@
                     fontFamily: {
                         sans: ['Plus Jakarta Sans', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    spacing: {
+                        'safe-top': 'env(safe-area-inset-top)',
+                        'safe-bottom': 'env(safe-area-inset-bottom)',
                     }
                 }
             }
@@ -38,39 +54,44 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
         
+        /* Mobile Reset & Base Styles */
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #0F0F0F;
             color: #ffffff;
             -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none; /* Disables pull-to-refresh */
+            touch-action: pan-x pan-y; /* Improves touch handling */
+            user-select: none;
         }
 
-        /* Hide scrollbar */
+        /* Allow text selection in descriptions */
+        .selectable { user-select: text; }
+
+        /* Hide scrollbar but keep functionality */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Tech Interactions */
+        /* Smooth Interactions */
+        .touch-manipulation { touch-action: manipulation; } /* Removes 300ms click delay */
+
         .card-tech { 
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.1s ease, background-color 0.2s ease, border-color 0.2s ease;
             border: 1px solid transparent;
         }
         .card-tech:active { 
             transform: scale(0.98); 
+            background-color: #222;
         }
-        .card-tech:hover {
-            border-color: #00D745;
-            box-shadow: 0 0 15px rgba(0, 215, 69, 0.1);
-        }
-
-        /* Filter Button Active State */
+        
         .category-btn.active div {
             background-color: #00D745;
             color: #0F0F0F;
             border-color: #00D745;
-            box-shadow: 0 0 10px #00D745;
+            box-shadow: 0 0 10px rgba(0, 215, 69, 0.4);
         }
 
-        /* Map Dark Mode Styling */
+        /* Map Styling */
         .leaflet-popup-content-wrapper { 
             background-color: #1A1A1A; 
             color: white; 
@@ -81,59 +102,56 @@
         .leaflet-popup-content { margin: 10px; font-family: 'Plus Jakarta Sans', sans-serif; }
         .leaflet-popup-tip { background-color: #1A1A1A; border: 1px solid #00D745; }
         .leaflet-container { background: #0F0F0F; }
-
-        /* Custom Scrollbar */
-        @media (min-width: 768px) {
-            .desktop-scroll::-webkit-scrollbar { width: 4px; }
-            .desktop-scroll::-webkit-scrollbar-track { background: #0F0F0F; }
-            .desktop-scroll::-webkit-scrollbar-thumb { background-color: #333; border-radius: 2px; }
-            .desktop-scroll::-webkit-scrollbar-thumb:hover { background-color: #00D745; }
-        }
-
-        ::selection { background: #00D745; color: #000; }
-        
-        /* Bottom Nav Active State */
-        .nav-item.active { color: #00D745; }
-        .nav-item.active i { transform: translateY(-2px); }
+        .leaflet-control-attribution { display: none; } /* Cleaner look */
 
         /* Mobile View Transitions */
         #sidebar-container {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); /* Snappy Bezier */
+            will-change: transform;
         }
-        .sidebar-hidden {
-            transform: translateY(100%);
-        }
-        .sidebar-visible {
-            transform: translateY(0);
+        .sidebar-hidden { transform: translateY(100%); }
+        .sidebar-visible { transform: translateY(0); }
+
+        /* Modal Backdrop Blur */
+        #modal-backdrop {
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
         }
     </style>
 </head>
 <body class="h-[100dvh] w-screen overflow-hidden flex flex-col md:flex-row bg-glr-dark relative">
 
-    <!-- MAP CONTAINER (Now Fullscreen on Mobile) -->
+    <!-- MAP CONTAINER -->
     <div id="map-container" class="absolute inset-0 md:relative md:w-full md:h-full md:flex-1 bg-[#111] order-1 md:order-2 z-0 md:z-10 md:border-l border-glr-border shrink-0">
-        <div id="map" class="w-full h-full opacity-90 hover:opacity-100 transition-opacity duration-700"></div>
-        <div class="hidden md:flex absolute top-6 right-6 z-[400] gap-3">
-             <div class="bg-glr-surface border border-glr-border px-4 py-2 rounded-sm text-xs font-mono text-gray-400 flex items-center gap-2">
-                <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span> Live Locatie
+        <div id="map" class="w-full h-full opacity-90 transition-opacity duration-700"></div>
+        
+        <!-- Top Overlay Controls -->
+        <div class="absolute top-safe-top left-0 w-full p-4 z-[400] flex justify-between pointer-events-none">
+             <!-- Status Badge -->
+             <div class="bg-glr-surface/90 backdrop-blur border border-glr-border px-3 py-1.5 rounded-full text-xs font-mono text-gray-300 flex items-center gap-2 shadow-lg pointer-events-auto">
+                <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span> Live
              </div>
+             
+             <!-- GPS Button -->
+             <button onclick="locateUser()" class="bg-white text-black w-10 h-10 rounded-full flex items-center justify-center shadow-lg pointer-events-auto hover:bg-gray-200 active:scale-90 transition-transform">
+                 <i class="fas fa-crosshairs"></i>
+             </button>
         </div>
     </div>
 
-    <!-- SIDEBAR / LIST CONTAINER (Overlay on Mobile, Left Side on Desktop) -->
-    <div id="sidebar-container" class="absolute inset-x-0 bottom-0 top-[15vh] md:static md:inset-auto md:h-full flex flex-col w-full md:w-[450px] lg:w-[480px] bg-glr-dark z-20 shadow-2xl md:shadow-none md:border-r border-glr-border order-2 md:order-1 transition-transform duration-300 rounded-t-3xl md:rounded-none sidebar-visible">
+    <!-- SIDEBAR / LIST CONTAINER -->
+    <div id="sidebar-container" class="absolute inset-x-0 bottom-0 top-[15vh] pt-safe-top md:static md:inset-auto md:h-full flex flex-col w-full md:w-[450px] lg:w-[480px] bg-glr-dark z-20 shadow-[0_-5px_20px_rgba(0,0,0,0.5)] md:shadow-none md:border-r border-glr-border order-2 md:order-1 transition-transform duration-300 rounded-t-3xl md:rounded-none sidebar-visible border-t border-glr-border md:border-t-0">
         
         <!-- Mobile Drag Handle -->
-        <div class="md:hidden w-full pt-3 pb-1 bg-glr-dark rounded-t-3xl shrink-0 flex justify-center cursor-pointer" onclick="toggleMobileView()">
-             <div class="w-12 h-1.5 bg-gray-700 rounded-full"></div>
+        <div class="md:hidden w-full pt-4 pb-2 bg-glr-dark rounded-t-3xl shrink-0 flex justify-center cursor-pointer touch-manipulation" onclick="toggleMobileView('hide')">
+             <div class="w-12 h-1 bg-gray-700 rounded-full opacity-50"></div>
         </div>
 
         <!-- HEADER & CATEGORIES -->
-        <div class="bg-glr-dark shrink-0 z-20 pb-4 shadow-md border-b border-glr-border px-5">
+        <div class="bg-glr-dark shrink-0 z-20 pb-2 shadow-md border-b border-glr-border px-5">
             <div class="pt-2 md:pt-6 pb-2 md:pb-4 flex justify-between items-end">
                 <div>
                     <p class="text-[10px] font-mono text-glr-neon font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-glr-neon animate-pulse"></span>
                         GLR Student
                     </p>
                     <h1 class="text-2xl md:text-3xl font-black text-white leading-none tracking-tight">GIDS <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">ZÜRICH</span></h1>
@@ -141,52 +159,47 @@
             </div>
 
             <!-- Categories -->
-            <div class="mt-2 flex overflow-x-auto no-scrollbar gap-3 pb-2">
-                <div onclick="filterSpots('all')" class="category-btn active flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon"><i class="fas fa-globe"></i></div>
-                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">Alles</span>
+            <div class="mt-2 flex overflow-x-auto no-scrollbar gap-3 pb-2 touch-pan-x">
+                <div onclick="filterSpots('all')" class="category-btn active flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-globe"></i></div>
+                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Alles</span>
                 </div>
-                <div onclick="filterSpots('water')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon"><i class="fas fa-tint"></i></div>
-                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">Water</span>
+                <div onclick="filterSpots('water')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-tint"></i></div>
+                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Water</span>
                 </div>
-                
-                <div onclick="filterSpots('chill')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon"><i class="fas fa-couch"></i></div>
-                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">Relax</span>
+                <div onclick="filterSpots('chill')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-couch"></i></div>
+                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Relax</span>
                 </div>
-                
-                <div onclick="filterSpots('photo')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon"><i class="fas fa-camera"></i></div>
-                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">Foto's</span>
+                <div onclick="filterSpots('photo')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-camera"></i></div>
+                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Foto's</span>
                 </div>
-                <div onclick="filterSpots('tech')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon"><i class="fas fa-building"></i></div>
-                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">Stad</span>
+                <div onclick="filterSpots('tech')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-building"></i></div>
+                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Stad</span>
                 </div>
-                
-                <div onclick="filterSpots('food')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon"><i class="fas fa-bowl-food"></i></div>
-                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">Eten</span>
+                <div onclick="filterSpots('food')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-bowl-food"></i></div>
+                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Eten</span>
                 </div>
             </div>
         </div>
 
         <!-- SCROLLABLE LIST -->
         <div class="flex-1 overflow-y-auto no-scrollbar desktop-scroll bg-glr-dark pb-24 md:pb-0 relative">
-            <div class="absolute inset-0 pointer-events-none z-0 opacity-[0.02]" style="background: repeating-linear-gradient(0deg, transparent, transparent 1px, #00D745 2px);"></div>
-
             <div class="px-5 py-6 relative z-10">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest font-mono" id="list-title">Hotspots</h2>
                 </div>
                 
-                <div id="cards-container" class="space-y-4">
+                <div id="cards-container" class="space-y-3">
                     <!-- Cards injected by JS -->
                 </div>
 
-                <div class="mt-8 mb-6 p-4 bg-glr-surface rounded-sm border-l-4 border-glr-neon relative overflow-hidden group">
-                    <div class="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                <div class="mt-8 mb-6 p-4 bg-glr-surface rounded-sm border-l-4 border-glr-neon relative overflow-hidden">
+                    <div class="absolute right-0 top-0 p-2 opacity-10">
                         <i class="fas fa-glass-water text-6xl text-glr-neon"></i>
                     </div>
                     <p class="text-[10px] text-glr-neon font-mono font-bold uppercase mb-1">
@@ -198,18 +211,18 @@
         </div>
     </div>
 
-    <!-- MOBILE BOTTOM NAV (Floating above everything) -->
-    <div class="md:hidden fixed bottom-0 w-full bg-glr-surface/95 backdrop-blur border-t border-glr-border py-3 px-6 flex justify-between items-center z-50 pb-safe">
-        <div onclick="switchTab(this, 'gids')" class="nav-item active flex flex-col items-center text-glr-neon cursor-pointer transition-all">
-            <i class="fas fa-list text-lg mb-1 transition-transform"></i>
+    <!-- MOBILE BOTTOM NAV -->
+    <div class="md:hidden fixed bottom-0 w-full bg-glr-surface/95 backdrop-blur border-t border-glr-border py-2 px-6 pb-safe-bottom flex justify-between items-center z-50 h-[80px]">
+        <div onclick="switchTab(this, 'gids')" class="nav-item active flex flex-col items-center text-glr-neon cursor-pointer transition-all active:scale-95 touch-manipulation w-16">
+            <i class="fas fa-list text-xl mb-1"></i>
             <span class="text-[10px] font-bold font-mono uppercase">Lijst</span>
         </div>
-        <div onclick="switchTab(this, 'kaart')" class="nav-item flex flex-col items-center text-gray-500 cursor-pointer transition-all hover:text-white">
-            <i class="fas fa-map text-lg mb-1 transition-transform"></i>
+        <div onclick="switchTab(this, 'kaart')" class="nav-item flex flex-col items-center text-gray-500 cursor-pointer transition-all active:scale-95 touch-manipulation w-16">
+            <i class="fas fa-map text-xl mb-1"></i>
             <span class="text-[10px] font-bold font-mono uppercase">Kaart</span>
         </div>
-        <div onclick="switchTab(this, 'favoriet')" class="nav-item flex flex-col items-center text-gray-500 cursor-pointer transition-all hover:text-white">
-            <i class="fas fa-heart text-lg mb-1 transition-transform"></i>
+        <div onclick="switchTab(this, 'favoriet')" class="nav-item flex flex-col items-center text-gray-500 cursor-pointer transition-all active:scale-95 touch-manipulation w-16">
+            <i class="fas fa-heart text-xl mb-1"></i>
             <span class="text-[10px] font-bold font-mono uppercase">Favoriet</span>
         </div>
     </div>
@@ -217,62 +230,66 @@
     <!-- DETAIL MODAL & BACKDROP -->
     <div id="detail-modal" class="fixed z-50 inset-0 flex items-end md:items-center justify-center pointer-events-none">
         
-        <!-- Backdrop -->
-        <div onclick="closeModal()" id="modal-backdrop" class="absolute inset-0 bg-black/80 backdrop-blur-sm opacity-0 transition-opacity duration-300 pointer-events-none"></div>
+        <div onclick="closeModal()" id="modal-backdrop" class="absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 pointer-events-none"></div>
         
-        <!-- Card -->
-        <div id="modal-card" class="bg-glr-surface border border-glr-border w-full md:w-[500px] md:max-h-[85vh] rounded-t-xl md:rounded-sm shadow-2xl relative overflow-hidden flex flex-col h-[75vh] md:h-auto transform transition-all duration-300 translate-y-full md:translate-y-10 md:opacity-0 pointer-events-auto">
+        <!-- Modal Card -->
+        <div id="modal-card" class="bg-glr-surface border border-glr-border w-full md:w-[500px] md:max-h-[85vh] rounded-t-xl md:rounded-sm shadow-2xl relative overflow-hidden flex flex-col h-[85vh] md:h-auto transform transition-all duration-300 translate-y-full md:translate-y-10 md:opacity-0 pointer-events-auto pb-safe-bottom">
             
-            <!-- Mobile Drag Handle -->
-            <div class="md:hidden w-full pt-4 pb-2 bg-glr-surface shrink-0 cursor-pointer" onclick="closeModal()">
+            <div class="md:hidden w-full pt-4 pb-2 bg-glr-surface shrink-0 cursor-pointer touch-manipulation" onclick="closeModal()">
                  <div class="w-12 h-1 bg-gray-700 rounded-full mx-auto"></div>
             </div>
             
-            <button onclick="closeModal()" class="absolute top-4 right-4 z-20 w-8 h-8 bg-black/50 backdrop-blur border border-white/10 rounded-sm flex items-center justify-center text-white hover:text-glr-neon hover:border-glr-neon transition-colors">
+            <button onclick="closeModal()" class="absolute top-4 right-4 z-20 w-8 h-8 bg-black/50 backdrop-blur border border-white/10 rounded-sm flex items-center justify-center text-white hover:text-glr-neon hover:border-glr-neon transition-colors touch-manipulation">
                 <i class="fas fa-times"></i>
             </button>
 
-            <div id="modal-content" class="overflow-y-auto p-6 pt-0 md:pt-6 h-full text-gray-300">
-                <!-- Content injected here -->
-            </div>
+            <div id="modal-content" class="overflow-y-auto p-6 pt-0 md:pt-6 h-full text-gray-300"></div>
         </div>
     </div>
 
     <script>
-        // GLR Placeholder Image (SVG Data URI) - Works offline
+        // --- CONFIG & DATA ---
         const fallbackImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%231A1A1A'/%3E%3Ctext x='50%25' y='50%25' font-family='monospace' font-weight='bold' font-size='48' fill='%2300D745' text-anchor='middle' dy='.3em'%3EGLR // ZRH%3C/text%3E%3C/svg%3E";
 
-        // Accurate coordinates verified and updated
         const spots = [
-            { id: 1, category: 'chill', title: "Bürkliplatz", desc: "Mooi uitzichtpunt over het meer. Je ziet de Alpen en veel zwanen.", rating: 4.8, coords: [47.3661, 8.5416], image: "https://images.unsplash.com/photo-1551633518-8f85f16c75c8?w=800&q=80&grayscale", tags: ["Uitzicht", "Water", "Relax"], color: "teal" },
-            { id: 2, category: 'photo', title: "Lindenhof", desc: "Oud fort met het beste uitzicht voor selfies.", rating: 4.9, coords: [47.3730, 8.5412], image: "https://images.unsplash.com/photo-1510673825466-302bc330ab95?w=800&q=80&grayscale", tags: ["Historie", "Foto", "Stad"], color: "blue" },
-            { id: 3, category: 'tech', title: "Freitag Toren", desc: "Toren van 19 zeecontainers. Duurzaam design icoon.", rating: 4.7, coords: [47.3857, 8.5194], image: "https://images.unsplash.com/photo-1560969568-d05545a999c6?w=800&q=80&grayscale", tags: ["Design", "Eco", "Architectuur"], color: "gray" },
-            { id: 4, category: 'tech', title: "Niederdorf", desc: "Gezellige oude straatjes met veel winkels.", rating: 4.5, coords: [47.3738, 8.5446], image: "https://images.unsplash.com/photo-1627918342261-55c5890e29b1?w=800&q=80&grayscale", tags: ["Wandelen", "Winkels", "Sfeer"], color: "purple" },
-            { id: 5, category: 'food', title: "Sternen Grill", desc: "Beste plek voor een snelle Bratwurst.", rating: 4.6, coords: [47.3668, 8.5456], image: "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&q=80&grayscale", tags: ["Eten", "Vlees", "Snel"], color: "red" },
-            { id: 6, category: 'tech', title: "ETH Polyterrasse", desc: "Universiteitsterrein. Neem het rode treintje omhoog.", rating: 4.8, coords: [47.3762, 8.5480], image: "https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?w=800&q=80&grayscale", tags: ["Uni", "Uitzicht", "Treintje"], color: "orange" },
-            { id: 7, category: 'food', title: "Hiltl", desc: "Oudste vegetarische restaurant ter wereld.", rating: 4.9, coords: [47.3733, 8.5367], image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80&grayscale", tags: ["Vega", "Luxe", "Bio"], color: "green" },
-            { id: 8, category: 'tech', title: "Europaallee", desc: "Modern stukje stad bij het spoor. Hier zit Google.", rating: 4.4, coords: [47.3791, 8.5319], image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80&grayscale", tags: ["Modern", "Tech", "Winkels"], color: "indigo" },
-            // Fountains
-            { id: 9, category: 'water', title: "Alfred Escher Fontein", desc: "Handige fontein vlakbij de ingang van het station.", rating: 5.0, coords: [47.3770, 8.5400], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg/800px-Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg", tags: ["Water", "HB", "Gratis"], color: "cyan" },
-            { id: 10, category: 'water', title: "Lindenhof Fontein", desc: "Oude fontein bovenop de heuvel.", rating: 4.8, coords: [47.3729, 8.5404], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG/800px-Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG", tags: ["Water", "Uitzicht", "Historie"], color: "cyan" },
-            { id: 11, category: 'water', title: "Münsterhof Fontein", desc: "Fontein midden in het oude centrum.", rating: 4.7, coords: [47.3701, 8.5410], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG/800px-Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG", tags: ["Water", "Centrum", "Gratis"], color: "cyan" },
-            { id: 12, category: 'water', title: "Augustiner Fontein", desc: "Kleurrijke fontein in een smal straatje.", rating: 4.9, coords: [47.3723, 8.5385], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG/800px-Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG", tags: ["Water", "Kleurrijk", "Foto"], color: "cyan" },
-            // Museum für Gestaltung
-            { id: 13, category: 'tech', title: "Museum für Gestaltung", desc: "Hét designmuseum van Zwitserland. Posters, graphics en objecten.", rating: 4.8, coords: [47.3828, 8.5358], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg/800px-Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg", tags: ["Design", "Grafisch", "Museum"], color: "indigo" },
+            // CHILL (GRATIS)
+            { id: 1, category: 'chill', title: "Bürkliplatz", desc: "Mooi uitzichtpunt over het meer. Je ziet de Alpen en veel zwanen.", rating: 4.8, coords: [47.3661, 8.5416], image: "https://images.unsplash.com/photo-1551633518-8f85f16c75c8?w=800&q=80&grayscale", tags: ["Uitzicht", "Water", "Relax"], color: "teal", price: "GRATIS", walkTime: "18 min" },
             
-            // Nieuwe eettentjes (Verified)
-            { id: 14, category: 'food', title: "Züri Bistro", desc: "Ideaal voor een snelle kebab of snack vlakbij het station.", rating: 4.5, coords: [47.3771, 8.5409], image: "https://images.unsplash.com/photo-1529042410759-befb72002dcd?w=800&q=80&grayscale", tags: ["Kebab", "Snel", "Station"], color: "red" },
-            { id: 15, category: 'food', title: "Holy Cow! Gourmet Burger", desc: "Zwitserse kwaliteitsburgers met verse ingrediënten.", rating: 4.6, coords: [47.3763, 8.5374], image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80&grayscale", tags: ["Burger", "Vers", "Lokaal"], color: "red" },
-            { id: 16, category: 'food', title: "Piadina Bar", desc: "Italiaanse flatbread sandwiches in de Niederdorf.", rating: 4.7, coords: [47.3731, 8.5438], image: "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=800&q=80&grayscale", tags: ["Italiaans", "Lunch", "Niederdorf"], color: "red" },
-            { id: 17, category: 'food', title: "Pizza Nation", desc: "Geweldige pizza slices voor onderweg.", rating: 4.8, coords: [47.3732, 8.5439], image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80&grayscale", tags: ["Pizza", "Slice", "Takeaway"], color: "red" },
-            { id: 18, category: 'food', title: "Rheinfelder Bierhalle", desc: "Enorme Cordon Bleus voor een goede prijs.", rating: 4.5, coords: [47.3755, 8.5440], image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&q=80&grayscale", tags: ["Zwitsers", "Groot", "Budget"], color: "red" },
-            { id: 19, category: 'food', title: "Raclette Factory", desc: "De plek om echte Zwitserse raclette te proberen.", rating: 4.6, coords: [47.3724, 8.5438], image: "https://images.unsplash.com/photo-1549488344-c7079f856fdd?w=800&q=80&grayscale", tags: ["Kaas", "Raclette", "Traditioneel"], color: "red" },
-            { id: 20, category: 'food', title: "ShopVille", desc: "Winkelcentrum onder het station met talloze eetopties.", rating: 4.4, coords: [47.3764, 8.5397], image: "https://images.unsplash.com/photo-1519671282429-b44660ead0a7?w=800&q=80&grayscale", tags: ["Veel Keuze", "Overdekt", "Winkels"], color: "red" }
+            // FOTO (GRATIS)
+            { id: 2, category: 'photo', title: "Lindenhof", desc: "Oud fort met het beste uitzicht voor selfies.", rating: 4.9, coords: [47.3730, 8.5412], image: "https://images.unsplash.com/photo-1510673825466-302bc330ab95?w=800&q=80&grayscale", tags: ["Historie", "Foto", "Stad"], color: "blue", price: "GRATIS", walkTime: "10 min" },
+            
+            // TECH / STAD (GRATIS)
+            { id: 3, category: 'tech', title: "Freitag Toren", desc: "Toren van 19 zeecontainers. Duurzaam design icoon.", rating: 4.7, coords: [47.3856, 8.5195], image: "https://images.unsplash.com/photo-1560969568-d05545a999c6?w=800&q=80&grayscale", tags: ["Design", "Eco", "Architectuur"], color: "gray", price: "GRATIS", walkTime: "30 min (of 5 min trein)" },
+            { id: 4, category: 'tech', title: "Niederdorf", desc: "Gezellige oude straatjes met veel winkels.", rating: 4.5, coords: [47.3738, 8.5446], image: "https://images.unsplash.com/photo-1627918342261-55c5890e29b1?w=800&q=80&grayscale", tags: ["Wandelen", "Winkels", "Sfeer"], color: "purple", price: "GRATIS", walkTime: "8 min" },
+            { id: 6, category: 'tech', title: "ETH Polyterrasse", desc: "Universiteitsterrein. Neem het rode treintje omhoog.", rating: 4.8, coords: [47.3762, 8.5480], image: "https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?w=800&q=80&grayscale", tags: ["Uni", "Uitzicht", "Treintje"], color: "orange", price: "GRATIS", walkTime: "15 min" },
+            { id: 8, category: 'tech', title: "Europaallee", desc: "Modern stukje stad bij het spoor. Hier zit Google.", rating: 4.4, coords: [47.3791, 8.5319], image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80&grayscale", tags: ["Modern", "Tech", "Winkels"], color: "indigo", price: "GRATIS", walkTime: "2 min" },
+            
+            // WATER (GRATIS)
+            { id: 9, category: 'water', title: "Alfred Escher Fontein", desc: "Handige fontein vlakbij de ingang van het station.", rating: 5.0, coords: [47.3770, 8.5400], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg/800px-Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg", tags: ["Water", "HB", "Gratis"], color: "cyan", price: "GRATIS", walkTime: "1 min" },
+            { id: 10, category: 'water', title: "Lindenhof Fontein", desc: "Oude fontein bovenop de heuvel.", rating: 4.8, coords: [47.3729, 8.5404], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG/800px-Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG", tags: ["Water", "Uitzicht", "Historie"], color: "cyan", price: "GRATIS", walkTime: "10 min" },
+            { id: 11, category: 'water', title: "Münsterhof Fontein", desc: "Fontein midden in het oude centrum.", rating: 4.7, coords: [47.3701, 8.5410], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG/800px-Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG", tags: ["Water", "Centrum", "Gratis"], color: "cyan", price: "GRATIS", walkTime: "12 min" },
+            { id: 12, category: 'water', title: "Augustiner Fontein", desc: "Kleurrijke fontein in een smal straatje.", rating: 4.9, coords: [47.3723, 8.5385], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG/800px-Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG", tags: ["Water", "Kleurrijk", "Foto"], color: "cyan", price: "GRATIS", walkTime: "10 min" },
+            
+            // TECH (MUSEUM)
+            { id: 13, category: 'tech', title: "Museum für Gestaltung", desc: "Hét designmuseum van Zwitserland. Posters, graphics en objecten.", rating: 4.8, coords: [47.3828, 8.5358], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg/800px-Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg", tags: ["Design", "Grafisch", "Museum"], color: "indigo", price: "GRATIS (met kaart)", walkTime: "7 min" },
+            
+            // FOOD (BETAALD)
+            { id: 5, category: 'food', title: "Sternen Grill", desc: "Beste plek voor een snelle Bratwurst.", rating: 4.6, coords: [47.3670, 8.5451], image: "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&q=80&grayscale", tags: ["Eten", "Vlees", "Snel"], color: "red", price: "€€", walkTime: "18 min" },
+            { id: 7, category: 'food', title: "Hiltl", desc: "Oudste vegetarische restaurant ter wereld.", rating: 4.9, coords: [47.3730, 8.5367], image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80&grayscale", tags: ["Vega", "Luxe", "Bio"], color: "green", price: "€€€", walkTime: "9 min" },
+            { id: 14, category: 'food', title: "Züri Bistro", desc: "Ideaal voor een snelle kebab of snack vlakbij het station.", rating: 4.5, coords: [47.3771, 8.5409], image: "https://images.unsplash.com/photo-1529042410759-befb72002dcd?w=800&q=80&grayscale", tags: ["Kebab", "Snel", "Station"], color: "red", price: "€", walkTime: "0 min (In HB)" },
+            { id: 15, category: 'food', title: "Holy Cow! Gourmet Burger", desc: "Zwitserse kwaliteitsburgers met verse ingrediënten.", rating: 4.6, coords: [47.3763, 8.5374], image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80&grayscale", tags: ["Burger", "Vers", "Lokaal"], color: "red", price: "€€", walkTime: "5 min" },
+            { id: 16, category: 'food', title: "Piadina Bar", desc: "Italiaanse flatbread sandwiches in de Niederdorf.", rating: 4.7, coords: [47.3731, 8.5438], image: "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=800&q=80&grayscale", tags: ["Italiaans", "Lunch", "Niederdorf"], color: "red", price: "€", walkTime: "10 min" },
+            { id: 17, category: 'food', title: "Pizza Nation", desc: "Geweldige pizza slices voor onderweg.", rating: 4.8, coords: [47.3732, 8.5439], image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80&grayscale", tags: ["Pizza", "Slice", "Takeaway"], color: "red", price: "€", walkTime: "10 min" },
+            { id: 18, category: 'food', title: "Rheinfelder Bierhalle", desc: "Enorme Cordon Bleus voor een goede prijs.", rating: 4.5, coords: [47.3755, 8.5440], image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&q=80&grayscale", tags: ["Zwitsers", "Groot", "Budget"], color: "red", price: "€€", walkTime: "8 min" },
+            { id: 19, category: 'food', title: "Raclette Factory", desc: "De plek om echte Zwitserse raclette te proberen.", rating: 4.6, coords: [47.3724, 8.5438], image: "https://images.unsplash.com/photo-1549488344-c7079f856fdd?w=800&q=80&grayscale", tags: ["Kaas", "Raclette", "Traditioneel"], color: "red", price: "€€", walkTime: "10 min" },
+            { id: 20, category: 'food', title: "ShopVille", desc: "Winkelcentrum onder het station met talloze eetopties.", rating: 4.4, coords: [47.3764, 8.5397], image: "https://images.unsplash.com/photo-1519671282429-b44660ead0a7?w=800&q=80&grayscale", tags: ["Veel Keuze", "Overdekt", "Winkels"], color: "red", price: "€", walkTime: "0 min (Onder HB)" }
         ];
 
         const stationCoords = [47.3779, 8.5403];
         let map;
+        let markers = {};
 
+        // --- INIT ---
         function init() {
             initMap();
             renderList(spots);
@@ -290,66 +307,103 @@
         }
 
         function initMap() {
-            map = L.map('map', { zoomControl: false, scrollWheelZoom: 'center' }).setView(stationCoords, 14);
+            map = L.map('map', { 
+                zoomControl: false, 
+                scrollWheelZoom: 'center',
+                zoomSnap: 0.5 
+            }).setView(stationCoords, 14.5);
+            
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { 
                 attribution: '', subdomains: 'abcd', maxZoom: 19
             }).addTo(map);
 
+            // Zoom control
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
             const stationIcon = L.divIcon({
                 className: 'custom-icon',
-                html: `<div class="relative w-8 h-8 flex items-center justify-center">
-                        <div class="absolute inset-0 bg-glr-neon opacity-50 rounded-sm animate-ping"></div>
-                        <div class="relative bg-glr-neon text-black w-8 h-8 rounded-sm flex items-center justify-center border border-white font-bold shadow-[0_0_15px_rgba(0,215,69,0.5)]"><i class="fas fa-train"></i></div>
+                html: `<div class="relative w-10 h-10 flex items-center justify-center">
+                        <div class="absolute inset-0 bg-red-500 opacity-30 rounded-full animate-ping"></div>
+                        <div class="relative bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-lg"><i class="fas fa-train text-sm"></i></div>
                        </div>`,
-                iconSize: [32, 32],
-                iconAnchor: [16, 16]
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
             });
             L.marker(stationCoords, {icon: stationIcon}).addTo(map).bindPopup("<b>START</b><br>Zürich HB");
 
+            // Add all spots
             spots.forEach(spot => {
                 let iconClass = getIconForCategory(spot.category);
-                let borderColor = spot.category === 'water' ? 'border-cyan-500 text-cyan-500 hover:border-cyan-300 hover:text-cyan-300' : 'border-gray-600 text-gray-300 hover:border-glr-neon hover:text-glr-neon';
+                let borderColor = spot.category === 'water' ? 'border-cyan-500 text-cyan-500' : 'border-gray-500 text-gray-300';
+                if(spot.category !== 'water') borderColor += ' hover:border-glr-neon hover:text-glr-neon';
                 
                 const icon = L.divIcon({
                     className: 'custom-icon',
-                    html: `<div class="bg-glr-surface ${borderColor} w-8 h-8 rounded-sm flex items-center justify-center border hover:bg-black transition-all shadow-md group">
-                            <i class="fas ${iconClass} text-xs group-hover:scale-125 transition-transform"></i>
+                    html: `<div class="bg-glr-surface ${borderColor} w-9 h-9 rounded-xl flex items-center justify-center border hover:bg-black transition-all shadow-lg group">
+                            <i class="fas ${iconClass} text-sm group-hover:scale-110 transition-transform"></i>
                            </div>`,
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 16]
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 36],
+                    popupAnchor: [0, -36]
                 });
-                L.marker(spot.coords, {icon: icon}).addTo(map).on('click', () => openModal(spot.id));
+                
+                const marker = L.marker(spot.coords, {icon: icon}).addTo(map).on('click', () => openModal(spot.id));
+                markers[spot.id] = marker;
             });
         }
 
         function renderList(data) {
             const container = document.getElementById('cards-container');
             container.innerHTML = '';
+            
             data.forEach(spot => {
                 const card = document.createElement('div');
-                card.className = "card-tech flex gap-4 p-3 bg-glr-surface rounded-sm cursor-pointer group";
-                card.onclick = () => openModal(spot.id);
-                // Added onerror with fallbackImage
+                card.className = "card-tech flex gap-4 p-3 bg-glr-surface rounded-sm cursor-pointer group active:scale-[0.98] transition-transform";
+                card.onclick = () => selectSpotFromList(spot.id);
+                
                 card.innerHTML = `
                     <div class="w-20 h-20 shrink-0 rounded-sm overflow-hidden bg-black relative border border-glr-border group-hover:border-glr-neon transition-colors">
-                        <img src="${spot.image}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" alt="${spot.title}" onerror="this.onerror=null;this.src=fallbackImage;">
+                        <img src="${spot.image}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="${spot.title}" loading="lazy" onerror="this.onerror=null;this.src=fallbackImage;">
                     </div>
                     <div class="flex-1 flex flex-col justify-center">
                         <div class="flex justify-between items-start mb-1">
                             <h3 class="font-bold text-white text-base leading-tight font-mono uppercase tracking-wide group-hover:text-glr-neon transition-colors">${spot.title}</h3>
-                            <button onclick="event.stopPropagation(); toggleHeart(this)" class="w-6 h-6 flex items-center justify-center rounded-sm hover:bg-white/10 text-gray-500 hover:text-glr-neon transition-colors">
-                                <i class="fas fa-bookmark"></i>
+                            <button onclick="event.stopPropagation(); toggleHeart(this)" class="w-8 h-8 flex items-center justify-center rounded-sm hover:bg-white/10 text-gray-500 hover:text-glr-neon transition-colors touch-manipulation">
+                                <i class="fas fa-heart"></i>
                             </button>
                         </div>
-                        <p class="text-xs text-gray-400 mb-2 line-clamp-1 font-mono">${spot.desc}</p>
-                        <div class="flex gap-2 mt-auto">
-                            ${spot.tags.slice(0, 2).map(tag => `<span class="text-[9px] font-bold bg-black text-gray-300 px-2 py-1 rounded-sm border border-glr-border uppercase tracking-wider">${tag}</span>`).join('')}
+                        <p class="text-xs text-gray-400 mb-2 line-clamp-1 font-mono selectable">${spot.desc}</p>
+                        <div class="flex gap-2 mt-auto justify-between items-center">
+                            <div class="flex gap-1">
+                                ${spot.tags.slice(0, 2).map(tag => `<span class="text-[9px] font-bold bg-black text-gray-300 px-2 py-1 rounded-sm border border-glr-border uppercase tracking-wider">${tag}</span>`).join('')}
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-bold text-gray-400 flex items-center gap-1"><i class="fas fa-walking"></i> ${spot.walkTime}</span>
+                                <span class="text-[10px] font-bold ${spot.price === 'GRATIS' ? 'text-glr-neon' : 'text-white'}">${spot.price}</span>
+                            </div>
                         </div>
                     </div>
                 `;
                 container.appendChild(card);
+            });
+        }
+
+        // --- INTERACTIONS ---
+
+        function selectSpotFromList(id) {
+            const spot = spots.find(s => s.id === id);
+            if (!spot) return;
+
+            // 1. Open Modal
+            openModal(id);
+            
+            // 2. Hide Sidebar temporarily on mobile to show the jump logic
+            // (Optional: We keep sidebar visible and modal opens over it)
+            
+            // 3. Zoom Map to location
+            map.flyTo(spot.coords, 17, {
+                animate: true,
+                duration: 1.5
             });
         }
 
@@ -358,61 +412,51 @@
             if (!spot) return;
 
             const content = document.getElementById('modal-content');
-            
-            // Updated Google Maps URL format to reliable universal link
             const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${spot.coords[0]},${spot.coords[1]}`;
 
             content.innerHTML = `
-                <div class="h-48 md:h-56 w-full rounded-sm overflow-hidden mb-5 relative shadow-md group border border-glr-border">
-                    <img src="${spot.image}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100" onerror="this.onerror=null;this.src=fallbackImage;">
+                <div class="h-48 w-full rounded-sm overflow-hidden mb-5 relative shadow-md group border border-glr-border">
+                    <img src="${spot.image}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src=fallbackImage;">
                     <div class="absolute inset-0 bg-gradient-to-t from-glr-dark to-transparent"></div>
                     <div class="absolute bottom-0 left-0 bg-glr-neon text-black px-3 py-1 text-xs font-bold font-mono uppercase">
-                        <i class="fas fa-walking"></i> Afstand: Dichtbij
+                        <i class="fas fa-walking"></i> ${spot.walkTime} vanaf HB
                     </div>
                 </div>
                 <div class="flex justify-between items-start mb-2">
-                    <h2 class="text-2xl font-black text-white leading-tight pr-4 font-mono uppercase">${spot.title}</h2>
+                    <h2 class="text-2xl font-black text-white leading-tight pr-4 font-mono uppercase select-all">${spot.title}</h2>
                 </div>
                 <div class="flex items-center gap-4 mb-6 text-xs text-gray-400 font-mono uppercase tracking-widest border-b border-glr-border pb-4">
                     <span class="text-glr-neon"><i class="fas fa-star"></i> ${spot.rating}</span>
                     <span>|</span>
                     <span>${spot.category}</span>
                     <span>|</span>
-                    <span>GRATIS</span>
+                    <span class="${spot.price === 'GRATIS' ? 'text-glr-neon' : 'text-white'}">${spot.price}</span>
                 </div>
-                <p class="text-gray-300 leading-relaxed mb-6 text-sm md:text-base font-sans">${spot.desc} Perfecte plek om even te relaxen of inspiratie op te doen.</p>
+                <p class="text-gray-300 leading-relaxed mb-6 text-sm md:text-base font-sans selectable">${spot.desc}</p>
                 <div class="flex flex-wrap gap-2 mb-8">
                     ${spot.tags.map(tag => `<span class="bg-black text-glr-neon px-3 py-1.5 rounded-sm text-xs font-bold border border-glr-border flex items-center gap-1 font-mono uppercase"><i class="fas fa-tag text-[8px]"></i> ${tag}</span>`).join('')}
                 </div>
-                <button onclick="window.open('${mapsUrl}', '_blank')" class="w-full bg-glr-neon text-black font-black py-4 rounded-sm shadow-[0_0_20px_rgba(0,215,69,0.3)] hover:shadow-[0_0_30px_rgba(0,215,69,0.6)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 uppercase tracking-wider font-mono text-sm border border-glr-neon">
+                <button onclick="window.open('${mapsUrl}', '_blank')" class="w-full bg-glr-neon text-black font-black py-4 rounded-sm shadow-[0_0_20px_rgba(0,215,69,0.3)] hover:shadow-[0_0_30px_rgba(0,215,69,0.6)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 uppercase tracking-wider font-mono text-sm border border-glr-neon touch-manipulation">
                     <i class="fas fa-location-arrow"></i> Route in Maps
                 </button>
             `;
 
-            map.flyTo(spot.coords, 16, { duration: 1.2 });
-
             const backdrop = document.getElementById('modal-backdrop');
             const card = document.getElementById('modal-card');
             
-            // Show Backdrop (fade in)
             backdrop.classList.remove('opacity-0', 'pointer-events-none');
-            
-            // Show Card (slide up)
             card.classList.remove('translate-y-full', 'md:translate-y-10', 'md:opacity-0');
         }
 
         function closeModal() {
             const backdrop = document.getElementById('modal-backdrop');
             const card = document.getElementById('modal-card');
-            
-            // Hide Backdrop
             backdrop.classList.add('opacity-0', 'pointer-events-none');
-            
-            // Hide Card
             card.classList.add('translate-y-full', 'md:translate-y-10', 'md:opacity-0');
         }
 
         function toggleHeart(btn) {
+            // Visual toggle only for demo
             if (btn.classList.contains('text-glr-neon')) {
                 btn.classList.remove('text-glr-neon', 'fas');
                 btn.classList.add('text-gray-500', 'far');
@@ -428,7 +472,33 @@
             renderList(cat === 'all' ? spots : spots.filter(s => s.category === cat));
         }
 
+        function locateUser() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // Add/Move user marker
+                    if(!window.userMarker) {
+                        const userIcon = L.divIcon({
+                            className: 'user-marker',
+                            html: '<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-md"></div>',
+                            iconSize: [16, 16]
+                        });
+                        window.userMarker = L.marker([lat, lng], {icon: userIcon}).addTo(map);
+                    } else {
+                        window.userMarker.setLatLng([lat, lng]);
+                    }
+                    
+                    map.flyTo([lat, lng], 16);
+                });
+            } else {
+                alert("Geolocatie wordt niet ondersteund door deze browser.");
+            }
+        }
+
         function switchTab(el, tabName) {
+            // 1. Update UI Buttons
             document.querySelectorAll('.nav-item').forEach(btn => {
                 btn.classList.remove('active', 'text-glr-neon');
                 btn.classList.add('text-gray-500');
@@ -436,62 +506,43 @@
             el.classList.add('active', 'text-glr-neon');
             el.classList.remove('text-gray-500');
 
+            // 2. Logic
+            const sidebar = document.getElementById('sidebar-container');
+            
             if (tabName === 'gids') {
                 filterSpots('all');
                 document.getElementById('list-title').textContent = "Hotspots";
-                // Show Sidebar
-                const sidebar = document.getElementById('sidebar-container');
                 sidebar.classList.remove('sidebar-hidden');
                 sidebar.classList.add('sidebar-visible');
-            } else if (tabName === 'favoriet') {
-                renderList(spots.slice(0, 2));
+            } 
+            else if (tabName === 'favoriet') {
+                renderList(spots.slice(0, 3)); // Demo favorieten
                 document.getElementById('list-title').textContent = "Favorieten";
-                // Show Sidebar
-                const sidebar = document.getElementById('sidebar-container');
                 sidebar.classList.remove('sidebar-hidden');
                 sidebar.classList.add('sidebar-visible');
-            } else if (tabName === 'kaart') {
-                // Hide Sidebar to show Map
-                const sidebar = document.getElementById('sidebar-container');
+            } 
+            else if (tabName === 'kaart') {
                 sidebar.classList.remove('sidebar-visible');
                 sidebar.classList.add('sidebar-hidden');
+                
+                // IMPORTANT: Invalidate map size after transition to ensure full tiles
+                setTimeout(() => { map.invalidateSize(); }, 350);
             }
         }
-        
-        function toggleMobileView() {
-             const sidebar = document.getElementById('sidebar-container');
-             if(sidebar.classList.contains('sidebar-visible')){
-                 sidebar.classList.remove('sidebar-visible');
-                 sidebar.classList.add('sidebar-hidden');
-                 // Update Nav Active State manually to Map
-                 document.querySelectorAll('.nav-item').forEach(btn => {
-                    btn.classList.remove('active', 'text-glr-neon');
-                    btn.classList.add('text-gray-500');
-                 });
-                 // Find the 'kaart' button and activate it (a bit hacky but works for this simple case)
-                 const mapBtn = document.querySelector("div[onclick=\"switchTab(this, 'kaart')\"]");
-                 if(mapBtn) {
-                     mapBtn.classList.add('active', 'text-glr-neon');
-                     mapBtn.classList.remove('text-gray-500');
-                 }
-             } else {
-                 sidebar.classList.remove('sidebar-hidden');
-                 sidebar.classList.add('sidebar-visible');
-                 // Default back to Gids active state
-                 document.querySelectorAll('.nav-item').forEach(btn => {
-                    btn.classList.remove('active', 'text-glr-neon');
-                    btn.classList.add('text-gray-500');
-                 });
-                 const guideBtn = document.querySelector("div[onclick=\"switchTab(this, 'gids')\"]");
-                 if(guideBtn) {
-                     guideBtn.classList.add('active', 'text-glr-neon');
-                     guideBtn.classList.remove('text-gray-500');
-                 }
-             }
+
+        // Fix viewport height for mobile browsers
+        function setVh() {
+            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
         }
+        window.addEventListener('resize', setVh);
+        setVh();
 
         init();
+        // Resize listener to close modal on desktop resize
         window.addEventListener('resize', () => closeModal());
     </script>
 </body>
 </html>
+
+
