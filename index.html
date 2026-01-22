@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="nl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GLR Portal: Zürich</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'glr-neon': '#00D745',
+                        'glr-dark': '#0F0F0F',
+                        'glr-surface': '#1A1A1A',
+                        'glr-border': '#333333',
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'], // Added for data/tech feel
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Fonts -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0F0F0F; /* GLR-Dark-Bg */
+            color: #ffffff;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Hide scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Tech Interactions */
+        .card-tech { 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+        .card-tech:active { 
+            transform: scale(0.98); 
+        }
+        .card-tech:hover {
+            border-color: #00D745; /* GLR-Neon border on hover */
+            box-shadow: 0 0 15px rgba(0, 215, 69, 0.1);
+        }
+
+        /* Filter Button Active State */
+        .category-btn.active div {
+            background-color: #00D745;
+            color: #0F0F0F;
+            border-color: #00D745;
+            box-shadow: 0 0 10px #00D745;
+        }
+
+        /* Modal Transitions */
+        #detail-modal {
+            transition: visibility 0s linear 0.3s;
+        }
+        #detail-modal.open {
+            transition-delay: 0s;
+            visibility: visible;
+        }
+        
+        /* Animation States */
+        .modal-mobile-hidden { transform: translateY(100%); }
+        .modal-mobile-visible { transform: translateY(0); }
+        .modal-desktop-hidden { opacity: 0; transform: scale(0.95); pointer-events: none; }
+        .modal-desktop-visible { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+        /* Map Dark Mode Styling */
+        .leaflet-popup-content-wrapper { 
+            background-color: #1A1A1A; 
+            color: white; 
+            border: 1px solid #00D745;
+            border-radius: 4px;
+            padding: 0; 
+        }
+        .leaflet-popup-content { margin: 10px; font-family: 'Plus Jakarta Sans', sans-serif; }
+        .leaflet-popup-tip { background-color: #1A1A1A; border: 1px solid #00D745; }
+        .leaflet-container { background: #0F0F0F; }
+
+        /* Custom Scrollbar for Desktop List */
+        @media (min-width: 768px) {
+            .desktop-scroll::-webkit-scrollbar { width: 4px; }
+            .desktop-scroll::-webkit-scrollbar-track { background: #0F0F0F; }
+            .desktop-scroll::-webkit-scrollbar-thumb { background-color: #333; border-radius: 2px; }
+            .desktop-scroll::-webkit-scrollbar-thumb:hover { background-color: #00D745; }
+        }
+
+        /* GLR Neon Text Selection */
+        ::selection {
+            background: #00D745;
+            color: #000;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col md:flex-row bg-glr-dark">
+
+    <!-- LEFT COLUMN (Sidebar) -->
+    <div class="flex flex-col w-full md:w-[450px] lg:w-[480px] h-full bg-glr-dark z-30 shadow-2xl md:shadow-none md:border-r border-glr-border order-2 md:order-1 relative">
+        
+        <!-- HEADER & STORIES -->
+        <div class="bg-glr-dark shrink-0 z-20 pb-4 shadow-md border-b border-glr-border">
+            <!-- Header -->
+            <div class="px-5 pt-6 pb-4 flex justify-between items-end">
+                <div>
+                    <p class="text-[10px] font-mono text-glr-neon font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-glr-neon animate-pulse"></span>
+                        System: Online
+                    </p>
+                    <h1 class="text-3xl font-black text-white leading-none tracking-tight">PORTAL <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">ZÜRICH</span></h1>
+                </div>
+                <div class="bg-glr-surface border border-glr-border text-gray-300 px-3 py-1.5 rounded-sm font-mono text-xs flex items-center gap-2">
+                    <i class="fas fa-cloud text-glr-neon"></i> 14°C
+                </div>
+            </div>
+
+            <!-- Categories (Tech Style) -->
+            <div class="mt-2 flex overflow-x-auto no-scrollbar px-5 gap-3 pb-2">
+                <!-- Helper function to generate category buttons -->
+                <div onclick="filterSpots('all')" class="category-btn active flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">All</span>
+                </div>
+
+                <div onclick="filterSpots('chill')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon">
+                        <i class="fas fa-pause"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">Chill</span>
+                </div>
+
+                <div onclick="filterSpots('photo')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">Vis</span>
+                </div>
+
+                <div onclick="filterSpots('tech')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">Tech</span>
+                </div>
+
+                <div onclick="filterSpots('food')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16">
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all group-hover:border-glr-neon group-hover:text-glr-neon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider group-hover:text-white">Fuel</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIST CONTAINER -->
+        <div class="flex-1 overflow-y-auto no-scrollbar desktop-scroll bg-glr-dark pb-20 md:pb-0 relative">
+            <!-- Scanlines Effect (Subtle) -->
+            <div class="absolute inset-0 pointer-events-none z-0 opacity-[0.02]" style="background: repeating-linear-gradient(0deg, transparent, transparent 1px, #00D745 2px);"></div>
+
+            <div class="px-5 py-6 relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest font-mono">Detected Signals</h2>
+                    <span class="text-[10px] font-bold text-glr-neon bg-glr-neon/10 border border-glr-neon/20 px-2 py-1 rounded-sm">
+                        <i class="fas fa-satellite-dish mr-1"></i> LIVE
+                    </span>
+                </div>
+                
+                <div id="cards-container" class="space-y-4">
+                    <!-- Cards injected by JS -->
+                </div>
+
+                <!-- System Notification -->
+                <div class="mt-8 mb-6 p-4 bg-glr-surface rounded-sm border-l-4 border-glr-neon relative overflow-hidden group">
+                    <div class="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="fas fa-terminal text-6xl text-glr-neon"></i>
+                    </div>
+                    <p class="text-[10px] text-glr-neon font-mono font-bold uppercase mb-1">
+                        <i class="fas fa-info-circle mr-1"></i> System Advice
+                    </p>
+                    <p class="text-sm text-gray-300">Hydration levels low? Access the <strong class="text-white">1200+ public fountains</strong>. Resource is free and high-quality.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MOBILE BOTTOM NAV -->
+        <div class="md:hidden absolute bottom-0 w-full bg-glr-surface/95 backdrop-blur border-t border-glr-border py-3 px-6 flex justify-between items-center z-40 pb-6">
+            <div class="flex flex-col items-center text-glr-neon">
+                <i class="fas fa-globe text-lg mb-1"></i>
+                <span class="text-[10px] font-bold font-mono uppercase">Portal</span>
+            </div>
+            <div class="flex flex-col items-center text-gray-500">
+                <i class="fas fa-bookmark text-lg mb-1"></i>
+                <span class="text-[10px] font-bold font-mono uppercase">Saved</span>
+            </div>
+            <div class="flex flex-col items-center text-gray-500">
+                <i class="fas fa-map text-lg mb-1"></i>
+                <span class="text-[10px] font-bold font-mono uppercase">Grid</span>
+            </div>
+            <div class="flex flex-col items-center text-gray-500">
+                <i class="fas fa-user-astronaut text-lg mb-1"></i>
+                <span class="text-[10px] font-bold font-mono uppercase">ID</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN (Map) -->
+    <div id="map-container" class="w-full h-[40vh] md:h-full flex-1 bg-[#111] order-1 md:order-2 z-10 relative border-l border-glr-border">
+        <div id="map" class="w-full h-full opacity-90 hover:opacity-100 transition-opacity duration-700"></div>
+        
+        <!-- Desktop Nav -->
+        <div class="hidden md:flex absolute top-6 right-6 z-[400] gap-3">
+             <div class="bg-glr-surface border border-glr-border px-4 py-2 rounded-sm text-xs font-mono text-gray-400 flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span> Live Tracking
+             </div>
+        </div>
+    </div>
+
+    <!-- DETAIL MODAL -->
+    <div id="detail-modal" class="fixed z-50 pointer-events-none inset-0 flex items-end md:items-center md:justify-center modal-mobile-hidden">
+        
+        <!-- Backdrop -->
+        <div onclick="closeModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm pointer-events-none opacity-0 transition-opacity duration-300" id="modal-backdrop"></div>
+        
+        <!-- Card -->
+        <div id="modal-card" class="bg-glr-surface border border-glr-border w-full md:w-[500px] md:max-h-[85vh] rounded-t-xl md:rounded-sm shadow-2xl relative pointer-events-auto overflow-hidden flex flex-col h-[75vh] md:h-auto transition-transform duration-300 translate-y-full md:translate-y-0 md:scale-95">
+            
+            <!-- Mobile Drag Handle -->
+            <div class="md:hidden w-full pt-4 pb-2 bg-glr-surface shrink-0" onclick="closeModal()">
+                 <div class="w-12 h-1 bg-gray-700 rounded-full mx-auto"></div>
+            </div>
+            
+            <button onclick="closeModal()" class="absolute top-4 right-4 z-20 w-8 h-8 bg-black/50 backdrop-blur border border-white/10 rounded-sm flex items-center justify-center text-white hover:text-glr-neon hover:border-glr-neon transition-colors">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <div id="modal-content" class="overflow-y-auto p-6 pt-0 md:pt-6 h-full text-gray-300">
+                <!-- Content -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const spots = [
+            { id: 1, category: 'chill', title: "Bürkliplatz Interface", desc: "Primary observation deck. Features: Alp rendering, Swan entities.", rating: 4.8, coords: [47.3667, 8.5413], image: "https://images.unsplash.com/photo-1551633518-8f85f16c75c8?w=800&q=80&grayscale", tags: ["View", "Water", "Chill"], color: "teal" },
+            { id: 2, category: 'photo', title: "Lindenhof Vantage", desc: "Ancient fortification layer. Optimal coordinates for visual data capture.", rating: 4.9, coords: [47.3723, 8.5411], image: "https://images.unsplash.com/photo-1510673825466-302bc330ab95?w=800&q=80&grayscale", tags: ["History", "Photo", "City"], color: "blue" },
+            { id: 3, category: 'tech', title: "Freitag Stack", desc: "19 modular units. Sustainable architecture prototype.", rating: 4.7, coords: [47.3851, 8.5193], image: "https://images.unsplash.com/photo-1560969568-d05545a999c6?w=800&q=80&grayscale", tags: ["Design", "Eco", "Structure"], color: "gray" },
+            { id: 4, category: 'tech', title: "Niederdorf Grid", desc: "Legacy pedestrian network. High density of retail nodes.", rating: 4.5, coords: [47.3718, 8.5444], image: "https://images.unsplash.com/photo-1627918342261-55c5890e29b1?w=800&q=80&grayscale", tags: ["Walk", "Shop", "Legacy"], color: "purple" },
+            { id: 5, category: 'food', title: "Sternen Fuel Station", desc: "Local energy replenishment. Specialty: Bratwurst.", rating: 4.6, coords: [47.3672, 8.5453], image: "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&q=80&grayscale", tags: ["Food", "Meat", "Quick"], color: "red" },
+            { id: 6, category: 'tech', title: "ETH Polyterrasse", desc: "Academic sector. Accessible via funicular transport protocol.", rating: 4.8, coords: [47.3763, 8.5480], image: "https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?w=800&q=80&grayscale", tags: ["Uni", "Science", "View"], color: "orange" },
+            { id: 7, category: 'food', title: "Hiltl Source", desc: "Vegetarian data origin. World's oldest instance.", rating: 4.9, coords: [47.3733, 8.5379], image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80&grayscale", tags: ["Vega", "Premium", "Bio"], color: "green" },
+            { id: 8, category: 'tech', title: "Europaallee Hub", desc: "Tech sector. HQ for Google CH. Modern rendering engine.", rating: 4.4, coords: [47.3785, 8.5326], image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80&grayscale", tags: ["Google", "Modern", "Tech"], color: "indigo" }
+        ];
+
+        const stationCoords = [47.3779, 8.5403];
+        let map;
+        let markers = {};
+
+        function init() {
+            initMap();
+            renderList(spots);
+        }
+
+        function initMap() {
+            // Dark Matter Map Style
+            map = L.map('map', { zoomControl: false, scrollWheelZoom: 'center' }).setView(stationCoords, 14);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { 
+                attribution: '',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            // Custom Station Marker (Neon Pulse)
+            const stationIcon = L.divIcon({
+                className: 'custom-icon',
+                html: `<div class="relative w-8 h-8 flex items-center justify-center">
+                        <div class="absolute inset-0 bg-glr-neon opacity-50 rounded-sm animate-ping"></div>
+                        <div class="relative bg-glr-neon text-black w-8 h-8 rounded-sm flex items-center justify-center border border-white font-bold shadow-[0_0_15px_rgba(0,215,69,0.5)]"><i class="fas fa-train"></i></div>
+                       </div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            });
+            L.marker(stationCoords, {icon: stationIcon}).addTo(map).bindPopup("<b>BASE</b><br>Zürich HB");
+
+            spots.forEach(spot => {
+                const icon = L.divIcon({
+                    className: 'custom-icon',
+                    html: `<div class="bg-glr-surface text-gray-300 w-8 h-8 rounded-sm flex items-center justify-center border border-gray-600 hover:border-glr-neon hover:text-glr-neon hover:bg-black transition-all shadow-md group">
+                            <i class="fas fa-map-marker-alt text-xs group-hover:scale-125 transition-transform"></i>
+                           </div>`,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                });
+                const marker = L.marker(spot.coords, {icon: icon}).addTo(map).on('click', () => openModal(spot.id));
+                markers[spot.id] = marker;
+            });
+        }
+
+        function renderList(data) {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+            data.forEach(spot => {
+                const card = document.createElement('div');
+                card.className = "card-tech flex gap-4 p-3 bg-glr-surface rounded-sm cursor-pointer group";
+                card.onclick = () => openModal(spot.id);
+                card.innerHTML = `
+                    <div class="w-20 h-20 shrink-0 rounded-sm overflow-hidden bg-black relative border border-glr-border group-hover:border-glr-neon transition-colors">
+                        <img src="${spot.image}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" alt="${spot.title}">
+                    </div>
+                    <div class="flex-1 flex flex-col justify-center">
+                        <div class="flex justify-between items-start mb-1">
+                            <h3 class="font-bold text-white text-base leading-tight font-mono uppercase tracking-wide group-hover:text-glr-neon transition-colors">${spot.title}</h3>
+                            <button onclick="event.stopPropagation(); toggleHeart(this)" class="w-6 h-6 flex items-center justify-center rounded-sm hover:bg-white/10 text-gray-500 hover:text-glr-neon transition-colors">
+                                <i class="fas fa-bookmark"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-2 line-clamp-1 font-mono">${spot.desc}</p>
+                        <div class="flex gap-2 mt-auto">
+                            ${spot.tags.slice(0, 2).map(tag => `<span class="text-[9px] font-bold bg-black text-gray-300 px-2 py-1 rounded-sm border border-glr-border uppercase tracking-wider">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openModal(id) {
+            const spot = spots.find(s => s.id === id);
+            if (!spot) return;
+
+            const content = document.getElementById('modal-content');
+            content.innerHTML = `
+                <div class="h-48 md:h-56 w-full rounded-sm overflow-hidden mb-5 relative shadow-md group border border-glr-border">
+                    <img src="${spot.image}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100">
+                    <div class="absolute inset-0 bg-gradient-to-t from-glr-dark to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 bg-glr-neon text-black px-3 py-1 text-xs font-bold font-mono uppercase">
+                        <i class="fas fa-walking"></i> Distance: Close
+                    </div>
+                </div>
+                <div class="flex justify-between items-start mb-2">
+                    <h2 class="text-2xl font-black text-white leading-tight pr-4 font-mono uppercase">${spot.title}</h2>
+                    <div class="bg-glr-neon text-black px-2 py-1 rounded-sm text-[10px] font-bold shrink-0 font-mono">STATUS: OPEN</div>
+                </div>
+                <div class="flex items-center gap-4 mb-6 text-xs text-gray-400 font-mono uppercase tracking-widest border-b border-glr-border pb-4">
+                    <span class="text-glr-neon"><i class="fas fa-star"></i> ${spot.rating}</span>
+                    <span>|</span>
+                    <span>${spot.category}</span>
+                    <span>|</span>
+                    <span>FREE</span>
+                </div>
+                <p class="text-gray-300 leading-relaxed mb-6 text-sm md:text-base font-sans">${spot.desc} Optimized for creative exploration. Low latency environment for maximum output.</p>
+                <h3 class="font-bold text-white mb-3 text-xs uppercase tracking-widest font-mono border-l-2 border-glr-neon pl-2">Parameters</h3>
+                <div class="flex flex-wrap gap-2 mb-8">
+                    ${spot.tags.map(tag => `<span class="bg-black text-glr-neon px-3 py-1.5 rounded-sm text-xs font-bold border border-glr-border flex items-center gap-1 font-mono uppercase"><i class="fas fa-code text-[8px]"></i> ${tag}</span>`).join('')}
+                </div>
+                
+                <!-- PRIMARY ACTION BUTTON (GLR-Neon with Black Text) -->
+                <button onclick="window.open('https://maps.google.com/?q=${spot.coords[0]},${spot.coords[1]}')" class="w-full bg-glr-neon text-black font-black py-4 rounded-sm shadow-[0_0_20px_rgba(0,215,69,0.3)] hover:shadow-[0_0_30px_rgba(0,215,69,0.6)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 uppercase tracking-wider font-mono text-sm border border-glr-neon">
+                    <i class="fas fa-location-arrow"></i> Initiate Navigation
+                </button>
+            `;
+
+            map.flyTo(spot.coords, 16, { duration: 1.2 });
+
+            const modal = document.getElementById('detail-modal');
+            const backdrop = document.getElementById('modal-backdrop');
+            
+            modal.classList.add('open');
+            if (window.innerWidth >= 768) {
+                modal.classList.remove('modal-desktop-hidden');
+                modal.classList.add('modal-desktop-visible');
+            } else {
+                modal.classList.remove('modal-mobile-hidden');
+                modal.classList.add('modal-mobile-visible');
+            }
+            
+            backdrop.style.opacity = '1';
+            backdrop.classList.remove('pointer-events-none');
+            backdrop.classList.add('pointer-events-auto');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('detail-modal');
+            const backdrop = document.getElementById('modal-backdrop');
+            
+            if (window.innerWidth >= 768) {
+                 modal.classList.remove('modal-desktop-visible');
+                 modal.classList.add('modal-desktop-hidden');
+            } else {
+                 modal.classList.remove('modal-mobile-visible');
+                 modal.classList.add('modal-mobile-hidden');
+            }
+            modal.classList.remove('open');
+
+            backdrop.style.opacity = '0';
+            backdrop.classList.remove('pointer-events-auto');
+            backdrop.classList.add('pointer-events-none');
+        }
+
+        function toggleHeart(btn) {
+            if (btn.classList.contains('text-glr-neon')) {
+                btn.classList.remove('text-glr-neon', 'fas');
+                btn.classList.add('text-gray-500', 'far');
+            } else {
+                btn.classList.add('text-glr-neon', 'fas');
+                btn.classList.remove('text-gray-500', 'far');
+            }
+        }
+
+        function filterSpots(cat) {
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            if (cat === 'all') {
+                renderList(spots);
+            } else {
+                renderList(spots.filter(s => s.category === cat));
+            }
+        }
+
+        init();
+        window.addEventListener('resize', () => closeModal());
+    </script>
+</body>
+</html>
