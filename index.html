@@ -122,7 +122,6 @@
                     </p>
                     <h1 class="text-2xl md:text-3xl font-black text-white leading-none tracking-tight">GIDS <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">ZÜRICH</span></h1>
                 </div>
-                <!-- Removed Hardcoded Temperature Widget -->
             </div>
 
             <!-- Categories -->
@@ -164,7 +163,6 @@
             <div class="px-5 py-6 relative z-10">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest font-mono">Hotspots</h2>
-                    <!-- Removed NU OPEN badge -->
                 </div>
                 
                 <div id="cards-container" class="space-y-4">
@@ -241,7 +239,9 @@
             { id: 9, category: 'water', title: "Alfred Escher Fontein", desc: "Handige fontein vlakbij de ingang van het station.", rating: 5.0, coords: [47.3773, 8.5402], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg/800px-Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg", tags: ["Water", "HB", "Gratis"], color: "cyan" },
             { id: 10, category: 'water', title: "Lindenhof Fontein", desc: "Oude fontein bovenop de heuvel.", rating: 4.8, coords: [47.3723, 8.5411], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG/800px-Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG", tags: ["Water", "Uitzicht", "Historie"], color: "cyan" },
             { id: 11, category: 'water', title: "Münsterhof Fontein", desc: "Fontein midden in het oude centrum.", rating: 4.7, coords: [47.3702, 8.5414], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG/800px-Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG", tags: ["Water", "Centrum", "Gratis"], color: "cyan" },
-            { id: 12, category: 'water', title: "Augustiner Fontein", desc: "Kleurrijke fontein in een smal straatje.", rating: 4.9, coords: [47.3712, 8.5399], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG/800px-Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG", tags: ["Water", "Kleurrijk", "Foto"], color: "cyan" }
+            { id: 12, category: 'water', title: "Augustiner Fontein", desc: "Kleurrijke fontein in een smal straatje.", rating: 4.9, coords: [47.3712, 8.5399], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG/800px-Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG", tags: ["Water", "Kleurrijk", "Foto"], color: "cyan" },
+            // Museum für Gestaltung
+            { id: 13, category: 'tech', title: "Museum für Gestaltung", desc: "Hét designmuseum van Zwitserland. Posters, graphics en objecten.", rating: 4.8, coords: [47.3823, 8.5376], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg/800px-Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg", tags: ["Design", "Grafisch", "Museum"], color: "indigo" }
         ];
 
         const stationCoords = [47.3779, 8.5403];
@@ -400,13 +400,28 @@
             renderList(cat === 'all' ? spots : spots.filter(s => s.category === cat));
         }
 
-        function switchTab(el) {
+        function switchTab(el, tabName) {
             document.querySelectorAll('.nav-item').forEach(btn => {
                 btn.classList.remove('active', 'text-glr-neon');
                 btn.classList.add('text-gray-500');
             });
             el.classList.add('active', 'text-glr-neon');
             el.classList.remove('text-gray-500');
+
+            // Simple tab logic
+            if (tabName === 'gids') {
+                filterSpots('all');
+                document.getElementById('list-title').textContent = "Hotspots";
+            } else if (tabName === 'favoriet') {
+                // For demo: just filter random items or show "Coming Soon"
+                // Ideally this would filter by saved IDs. Let's just show a few.
+                // Since we don't have persistence, we'll just show the first 2 as a demo.
+                renderList(spots.slice(0, 2));
+                document.getElementById('list-title').textContent = "Favorieten";
+            } else if (tabName === 'kaart') {
+                // Scroll to top to see map
+                document.getElementById('map-container').scrollIntoView({behavior: 'smooth'});
+            }
         }
 
         init();
