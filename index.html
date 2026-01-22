@@ -162,7 +162,7 @@
 
             <div class="px-5 py-6 relative z-10">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest font-mono">Hotspots</h2>
+                    <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest font-mono" id="list-title">Hotspots</h2>
                 </div>
                 
                 <div id="cards-container" class="space-y-4">
@@ -226,22 +226,23 @@
         // GLR Placeholder Image (SVG Data URI) - Works offline
         const fallbackImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%231A1A1A'/%3E%3Ctext x='50%25' y='50%25' font-family='monospace' font-weight='bold' font-size='48' fill='%2300D745' text-anchor='middle' dy='.3em'%3EGLR // ZRH%3C/text%3E%3C/svg%3E";
 
+        // Accurate coordinates added based on verification
         const spots = [
-            { id: 1, category: 'chill', title: "Bürkliplatz", desc: "Mooi uitzichtpunt over het meer. Je ziet de Alpen en veel zwanen.", rating: 4.8, coords: [47.3667, 8.5413], image: "https://images.unsplash.com/photo-1551633518-8f85f16c75c8?w=800&q=80&grayscale", tags: ["Uitzicht", "Water", "Relax"], color: "teal" },
-            { id: 2, category: 'photo', title: "Lindenhof", desc: "Oud fort met het beste uitzicht voor selfies.", rating: 4.9, coords: [47.3723, 8.5411], image: "https://images.unsplash.com/photo-1510673825466-302bc330ab95?w=800&q=80&grayscale", tags: ["Historie", "Foto", "Stad"], color: "blue" },
-            { id: 3, category: 'tech', title: "Freitag Toren", desc: "Toren van 19 zeecontainers. Duurzaam design icoon.", rating: 4.7, coords: [47.3851, 8.5193], image: "https://images.unsplash.com/photo-1560969568-d05545a999c6?w=800&q=80&grayscale", tags: ["Design", "Eco", "Architectuur"], color: "gray" },
-            { id: 4, category: 'tech', title: "Niederdorf", desc: "Gezellige oude straatjes met veel winkels.", rating: 4.5, coords: [47.3718, 8.5444], image: "https://images.unsplash.com/photo-1627918342261-55c5890e29b1?w=800&q=80&grayscale", tags: ["Wandelen", "Winkels", "Sfeer"], color: "purple" },
-            { id: 5, category: 'food', title: "Sternen Grill", desc: "Beste plek voor een snelle Bratwurst.", rating: 4.6, coords: [47.3672, 8.5453], image: "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&q=80&grayscale", tags: ["Eten", "Vlees", "Snel"], color: "red" },
-            { id: 6, category: 'tech', title: "ETH Polyterrasse", desc: "Universiteitsterrein. Neem het rode treintje omhoog.", rating: 4.8, coords: [47.3763, 8.5480], image: "https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?w=800&q=80&grayscale", tags: ["Uni", "Uitzicht", "Treintje"], color: "orange" },
-            { id: 7, category: 'food', title: "Hiltl", desc: "Oudste vegetarische restaurant ter wereld.", rating: 4.9, coords: [47.3733, 8.5379], image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80&grayscale", tags: ["Vega", "Luxe", "Bio"], color: "green" },
-            { id: 8, category: 'tech', title: "Europaallee", desc: "Modern stukje stad bij het spoor. Hier zit Google.", rating: 4.4, coords: [47.3785, 8.5326], image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80&grayscale", tags: ["Modern", "Tech", "Winkels"], color: "indigo" },
+            { id: 1, category: 'chill', title: "Bürkliplatz", desc: "Mooi uitzichtpunt over het meer. Je ziet de Alpen en veel zwanen.", rating: 4.8, coords: [47.3661, 8.5416], image: "https://images.unsplash.com/photo-1551633518-8f85f16c75c8?w=800&q=80&grayscale", tags: ["Uitzicht", "Water", "Relax"], color: "teal" },
+            { id: 2, category: 'photo', title: "Lindenhof", desc: "Oud fort met het beste uitzicht voor selfies.", rating: 4.9, coords: [47.3730, 8.5412], image: "https://images.unsplash.com/photo-1510673825466-302bc330ab95?w=800&q=80&grayscale", tags: ["Historie", "Foto", "Stad"], color: "blue" },
+            { id: 3, category: 'tech', title: "Freitag Toren", desc: "Toren van 19 zeecontainers. Duurzaam design icoon.", rating: 4.7, coords: [47.3856, 8.5195], image: "https://images.unsplash.com/photo-1560969568-d05545a999c6?w=800&q=80&grayscale", tags: ["Design", "Eco", "Architectuur"], color: "gray" },
+            { id: 4, category: 'tech', title: "Niederdorf", desc: "Gezellige oude straatjes met veel winkels.", rating: 4.5, coords: [47.3738, 8.5446], image: "https://images.unsplash.com/photo-1627918342261-55c5890e29b1?w=800&q=80&grayscale", tags: ["Wandelen", "Winkels", "Sfeer"], color: "purple" },
+            { id: 5, category: 'food', title: "Sternen Grill", desc: "Beste plek voor een snelle Bratwurst.", rating: 4.6, coords: [47.3670, 8.5451], image: "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&q=80&grayscale", tags: ["Eten", "Vlees", "Snel"], color: "red" },
+            { id: 6, category: 'tech', title: "ETH Polyterrasse", desc: "Universiteitsterrein. Neem het rode treintje omhoog.", rating: 4.8, coords: [47.3762, 8.5480], image: "https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?w=800&q=80&grayscale", tags: ["Uni", "Uitzicht", "Treintje"], color: "orange" },
+            { id: 7, category: 'food', title: "Hiltl", desc: "Oudste vegetarische restaurant ter wereld.", rating: 4.9, coords: [47.3730, 8.5367], image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80&grayscale", tags: ["Vega", "Luxe", "Bio"], color: "green" },
+            { id: 8, category: 'tech', title: "Europaallee", desc: "Modern stukje stad bij het spoor. Hier zit Google.", rating: 4.4, coords: [47.3791, 8.5319], image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80&grayscale", tags: ["Modern", "Tech", "Winkels"], color: "indigo" },
             // Fountains
-            { id: 9, category: 'water', title: "Alfred Escher Fontein", desc: "Handige fontein vlakbij de ingang van het station.", rating: 5.0, coords: [47.3773, 8.5402], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg/800px-Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg", tags: ["Water", "HB", "Gratis"], color: "cyan" },
-            { id: 10, category: 'water', title: "Lindenhof Fontein", desc: "Oude fontein bovenop de heuvel.", rating: 4.8, coords: [47.3723, 8.5411], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG/800px-Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG", tags: ["Water", "Uitzicht", "Historie"], color: "cyan" },
-            { id: 11, category: 'water', title: "Münsterhof Fontein", desc: "Fontein midden in het oude centrum.", rating: 4.7, coords: [47.3702, 8.5414], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG/800px-Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG", tags: ["Water", "Centrum", "Gratis"], color: "cyan" },
-            { id: 12, category: 'water', title: "Augustiner Fontein", desc: "Kleurrijke fontein in een smal straatje.", rating: 4.9, coords: [47.3712, 8.5399], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG/800px-Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG", tags: ["Water", "Kleurrijk", "Foto"], color: "cyan" },
+            { id: 9, category: 'water', title: "Alfred Escher Fontein", desc: "Handige fontein vlakbij de ingang van het station.", rating: 5.0, coords: [47.3770, 8.5400], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg/800px-Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg", tags: ["Water", "HB", "Gratis"], color: "cyan" },
+            { id: 10, category: 'water', title: "Lindenhof Fontein", desc: "Oude fontein bovenop de heuvel.", rating: 4.8, coords: [47.3729, 8.5404], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG/800px-Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG", tags: ["Water", "Uitzicht", "Historie"], color: "cyan" },
+            { id: 11, category: 'water', title: "Münsterhof Fontein", desc: "Fontein midden in het oude centrum.", rating: 4.7, coords: [47.3701, 8.5410], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG/800px-Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG", tags: ["Water", "Centrum", "Gratis"], color: "cyan" },
+            { id: 12, category: 'water', title: "Augustiner Fontein", desc: "Kleurrijke fontein in een smal straatje.", rating: 4.9, coords: [47.3723, 8.5385], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG/800px-Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG", tags: ["Water", "Kleurrijk", "Foto"], color: "cyan" },
             // Museum für Gestaltung
-            { id: 13, category: 'tech', title: "Museum für Gestaltung", desc: "Hét designmuseum van Zwitserland. Posters, graphics en objecten.", rating: 4.8, coords: [47.3823, 8.5376], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg/800px-Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg", tags: ["Design", "Grafisch", "Museum"], color: "indigo" }
+            { id: 13, category: 'tech', title: "Museum für Gestaltung", desc: "Hét designmuseum van Zwitserland. Posters, graphics en objecten.", rating: 4.8, coords: [47.3822, 8.5376], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg/800px-Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg", tags: ["Design", "Grafisch", "Museum"], color: "indigo" }
         ];
 
         const stationCoords = [47.3779, 8.5403];
@@ -332,7 +333,10 @@
             if (!spot) return;
 
             const content = document.getElementById('modal-content');
-            // Added onerror with fallbackImage
+            
+            // Updated Google Maps URL format to reliable universal link
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${spot.coords[0]},${spot.coords[1]}`;
+
             content.innerHTML = `
                 <div class="h-48 md:h-56 w-full rounded-sm overflow-hidden mb-5 relative shadow-md group border border-glr-border">
                     <img src="${spot.image}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100" onerror="this.onerror=null;this.src=fallbackImage;">
@@ -343,7 +347,6 @@
                 </div>
                 <div class="flex justify-between items-start mb-2">
                     <h2 class="text-2xl font-black text-white leading-tight pr-4 font-mono uppercase">${spot.title}</h2>
-                    <!-- Removed OPEN status badge -->
                 </div>
                 <div class="flex items-center gap-4 mb-6 text-xs text-gray-400 font-mono uppercase tracking-widest border-b border-glr-border pb-4">
                     <span class="text-glr-neon"><i class="fas fa-star"></i> ${spot.rating}</span>
@@ -356,7 +359,7 @@
                 <div class="flex flex-wrap gap-2 mb-8">
                     ${spot.tags.map(tag => `<span class="bg-black text-glr-neon px-3 py-1.5 rounded-sm text-xs font-bold border border-glr-border flex items-center gap-1 font-mono uppercase"><i class="fas fa-tag text-[8px]"></i> ${tag}</span>`).join('')}
                 </div>
-                <button onclick="window.open('https://maps.google.com/?q=${spot.coords[0]},${spot.coords[1]}')" class="w-full bg-glr-neon text-black font-black py-4 rounded-sm shadow-[0_0_20px_rgba(0,215,69,0.3)] hover:shadow-[0_0_30px_rgba(0,215,69,0.6)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 uppercase tracking-wider font-mono text-sm border border-glr-neon">
+                <button onclick="window.open('${mapsUrl}', '_blank')" class="w-full bg-glr-neon text-black font-black py-4 rounded-sm shadow-[0_0_20px_rgba(0,215,69,0.3)] hover:shadow-[0_0_30px_rgba(0,215,69,0.6)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 uppercase tracking-wider font-mono text-sm border border-glr-neon">
                     <i class="fas fa-location-arrow"></i> Route in Maps
                 </button>
             `;
