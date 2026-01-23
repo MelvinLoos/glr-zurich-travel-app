@@ -293,6 +293,21 @@
         function init() {
             initMap();
             renderList(spots);
+            
+            // Register service worker if available
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').then(registration => {
+                    console.log('ServiceWorker registered with scope:', registration.scope);
+                    
+                    // Listen for controller change (new service worker activated)
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        console.log('New service worker activated, reloading page...');
+                        window.location.reload();
+                    });
+                }).catch(error => {
+                    console.log('ServiceWorker registration failed:', error);
+                });
+            }
         }
         
         function getIconForCategory(cat) {
