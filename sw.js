@@ -1,8 +1,12 @@
-const CACHE_NAME = 'glr-zurich-v4-fixes'; // Version bumped
+const CACHE_NAME = 'glr-zurich-v5-cors-fix';
 const ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',
+  '/manifest.json'
+];
+
+// External assets that might cause CORS issues
+const EXTERNAL_ASSETS = [
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
@@ -12,11 +16,24 @@ const ASSETS = [
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      // We try to add all, but if one fails (like a CORS restricted CDN), we log it and continue.
-      // Ideally, external CDNs should be cached with {mode: 'no-cors'} if needed, 
-      // but for this simple setup, we'll try standard addAll.
-      return cache.addAll(ASSETS).catch(err => console.warn("Some assets failed to cache:", err));
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // 1. Cache local assets (critical)
+      await cache.addAll(ASSETS);
+      
+      // 2. Try to cache external assets, but don't fail installation if one fails
+      // We use {mode: 'no-cors'} for external opaque resources if needed, 
+      // but 'addAll' is atomic (all or nothing). So we loop manually.
+      const externalPromises = EXTERNAL_ASSETS.map(async (url) => {
+        try {
+          const req = new Request(url, { mode: 'no-cors' }); // Request as opaque
+          const res = await fetch(req);
+          await cache.put(req, res);
+        } catch (err) {
+          console.warn(`Failed to cache external asset: ${url}`, err);
+        }
+      });
+      
+      await Promise.all(externalPromises);
     })
   );
 });
@@ -35,40 +52,37 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Only cache GET requests
+  // Only handle GET requests
   if (e.request.method !== 'GET') return;
 
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
+      // Return cache if found
       if (cachedResponse) {
-        // Return cached response immediately
         return cachedResponse;
       }
 
-      // If not in cache, fetch from network
+      // Network fallback
       return fetch(e.request).then((networkResponse) => {
-        // Valid response?
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          // If it's an opaque response (type === 'opaque', typical for CDNs without CORS), 
-          // we can still cache it, but we can't inspect it.
-          // However, for safety in this specific debugging case, let's just return it without caching if it's tricky.
-          // BUT: for offline support, we WANT to cache opaque responses if possible.
-          
-          // Let's try to cache everything that is a GET request to allow offline usage.
+        // Check if we received a valid response
+        if (!networkResponse || (networkResponse.status !== 200 && networkResponse.type !== 'opaque')) {
+          return networkResponse;
         }
 
         // Clone response because it can only be consumed once
         const responseToCache = networkResponse.clone();
 
         caches.open(CACHE_NAME).then((cache) => {
-          cache.put(e.request, responseToCache);
+          try {
+             cache.put(e.request, responseToCache);
+          } catch (err) {
+             console.warn("Cache put failed for:", e.request.url);
+          }
         });
 
         return networkResponse;
-      }).catch((err) => {
-        // Network failed (offline), and nothing in cache?
-        // You could return a fallback offline page here if you had one.
-        console.warn("Fetch failed:", err);
+      }).catch(() => {
+        // Offline fallback logic could go here
       });
     })
   );
