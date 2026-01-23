@@ -271,8 +271,21 @@
             { id: 11, category: 'water', title: "Münsterhof Fontein", desc: "Fontein midden in het oude centrum.", rating: 4.7, coords: [47.3701, 8.5410], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG/800px-Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG", tags: ["Water", "Centrum", "Gratis"], color: "cyan", price: "GRATIS", walkTime: "12 min" },
             { id: 12, category: 'water', title: "Augustiner Fontein", desc: "Kleurrijke fontein in een smal straatje.", rating: 4.9, coords: [47.3723, 8.5385], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG/800px-Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG", tags: ["Water", "Kleurrijk", "Foto"], color: "cyan", price: "GRATIS", walkTime: "10 min" },
             
-            // TECH (MUSEUM)
-            { id: 13, category: 'tech', title: "Museum für Gestaltung", desc: "Hét designmuseum van Zwitserland. Posters, graphics en objecten.", rating: 4.8, coords: [47.3828, 8.5358], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg/800px-Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg", tags: ["Design", "Grafisch", "Museum"], color: "indigo", price: "GRATIS (met kaart)", walkTime: "7 min" },
+            // DOCENTEN LOCATIE (MUSEUM)
+            { 
+                id: 13, 
+                category: 'tech', 
+                title: "Museum für Gestaltung", 
+                desc: "Hét designmuseum van Zwitserland. **DOCENTEN LOCATIE**", 
+                rating: 4.8, 
+                coords: [47.3828, 8.5358], 
+                image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg/800px-Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg", 
+                tags: ["Design", "Grafisch", "Meeting Point"], 
+                color: "indigo", 
+                price: "GRATIS (met kaart)", 
+                walkTime: "7 min",
+                isTeacherSpot: true // Speciale marker vlag
+            },
             
             // FOOD (BETAALD)
             { id: 5, category: 'food', title: "Sternen Grill", desc: "Beste plek voor een snelle Bratwurst.", rating: 4.6, coords: [47.3670, 8.5451], image: "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&q=80&grayscale", tags: ["Eten", "Vlees", "Snel"], color: "red", price: "€€", walkTime: "18 min" },
@@ -340,19 +353,37 @@
 
             // Add all spots
             spots.forEach(spot => {
-                let iconClass = getIconForCategory(spot.category);
-                let borderColor = spot.category === 'water' ? 'border-cyan-500 text-cyan-500' : 'border-gray-500 text-gray-300';
-                if(spot.category !== 'water') borderColor += ' hover:border-glr-neon hover:text-glr-neon';
+                let icon;
                 
-                const icon = L.divIcon({
-                    className: 'custom-icon',
-                    html: `<div class="bg-glr-surface ${borderColor} w-9 h-9 rounded-xl flex items-center justify-center border hover:bg-black transition-all shadow-lg group">
-                            <i class="fas ${iconClass} text-sm group-hover:scale-110 transition-transform"></i>
-                           </div>`,
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 36],
-                    popupAnchor: [0, -36]
-                });
+                // SPECIAL TEACHER MARKER
+                if (spot.isTeacherSpot) {
+                    icon = L.divIcon({
+                        className: 'custom-icon',
+                        html: `<div class="relative w-10 h-10 flex items-center justify-center">
+                                <div class="absolute inset-0 bg-yellow-500 opacity-40 rounded-full animate-ping"></div>
+                                <div class="relative bg-yellow-500 text-black w-9 h-9 rounded-full flex items-center justify-center border-2 border-white shadow-lg z-50">
+                                    <i class="fas fa-star text-sm"></i>
+                                </div>
+                               </div>`,
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 40],
+                        popupAnchor: [0, -40]
+                    });
+                } else {
+                    let iconClass = getIconForCategory(spot.category);
+                    let borderColor = spot.category === 'water' ? 'border-cyan-500 text-cyan-500' : 'border-gray-500 text-gray-300';
+                    if(spot.category !== 'water') borderColor += ' hover:border-glr-neon hover:text-glr-neon';
+                    
+                    icon = L.divIcon({
+                        className: 'custom-icon',
+                        html: `<div class="bg-glr-surface ${borderColor} w-9 h-9 rounded-xl flex items-center justify-center border hover:bg-black transition-all shadow-lg group">
+                                <i class="fas ${iconClass} text-sm group-hover:scale-110 transition-transform"></i>
+                               </div>`,
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 36],
+                        popupAnchor: [0, -36]
+                    });
+                }
                 
                 const marker = L.marker(spot.coords, {icon: icon}).addTo(map).on('click', () => openModal(spot.id));
                 markers[spot.id] = marker;
@@ -366,8 +397,18 @@
             data.forEach(spot => {
                 const card = document.createElement('div');
                 card.className = "card-tech flex gap-4 p-3 bg-glr-surface rounded-sm cursor-pointer group active:scale-[0.98] transition-transform";
+                // Highlighting Teacher Spot in list
+                if(spot.isTeacherSpot) {
+                    card.classList.add('border-yellow-500', 'border');
+                }
                 card.onclick = () => selectSpotFromList(spot.id);
                 
+                // Badge Logic
+                let badge = "";
+                if (spot.isTeacherSpot) {
+                    badge = `<span class="bg-yellow-500 text-black px-2 py-0.5 rounded text-[9px] font-bold uppercase mr-2"><i class="fas fa-star mr-1"></i> DOCENTEN LOCATIE</span>`;
+                }
+
                 card.innerHTML = `
                     <div class="w-20 h-20 shrink-0 rounded-sm overflow-hidden bg-black relative border border-glr-border group-hover:border-glr-neon transition-colors">
                         <img src="${spot.image}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="${spot.title}" loading="lazy" onerror="this.onerror=null;this.src=fallbackImage;">
@@ -379,6 +420,7 @@
                                 <i class="fas fa-heart"></i>
                             </button>
                         </div>
+                        <div class="mb-1">${badge}</div>
                         <p class="text-xs text-gray-400 mb-2 line-clamp-1 font-mono selectable">${spot.desc}</p>
                         <div class="flex gap-2 mt-auto justify-between items-center">
                             <div class="flex gap-1">
@@ -421,6 +463,11 @@
             const content = document.getElementById('modal-content');
             const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${spot.coords[0]},${spot.coords[1]}`;
 
+            let teacherBadge = "";
+            if (spot.isTeacherSpot) {
+                teacherBadge = `<div class="bg-yellow-500 text-black text-center py-1 font-bold text-xs uppercase mb-4 rounded-sm"><i class="fas fa-info-circle mr-1"></i> Wij zijn hier!</div>`;
+            }
+
             content.innerHTML = `
                 <div class="h-48 w-full rounded-sm overflow-hidden mb-5 relative shadow-md group border border-glr-border">
                     <img src="${spot.image}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src=fallbackImage;">
@@ -429,6 +476,7 @@
                         <i class="fas fa-walking"></i> ${spot.walkTime} vanaf HB
                     </div>
                 </div>
+                ${teacherBadge}
                 <div class="flex justify-between items-start mb-2">
                     <h2 class="text-2xl font-black text-white leading-tight pr-4 font-mono uppercase select-all">${spot.title}</h2>
                 </div>
