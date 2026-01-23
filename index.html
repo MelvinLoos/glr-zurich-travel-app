@@ -5,19 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>GLR Gids: Zürich</title>
     
-    <!-- PWA Meta Tags -->
+    <!-- PWA Meta Tags (Updated) -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0F0F0F">
     <meta name="application-name" content="GLR Zürich">
     <meta name="description" content="De ultieme gids voor GLR studenten in Zürich.">
 
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="manifest.json">
+
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
     
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS (Play CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -48,7 +53,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" xintegrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <!-- Fonts -->
     <style>
@@ -291,23 +296,14 @@
 
         // --- INIT ---
         function init() {
+            // Service Worker Logic Removed/Simplified inside HTML for clarity
+            // If you have sw.js, uncomment the registration part
+            if ('serviceWorker' in navigator) {
+               navigator.serviceWorker.register('sw.js').then(() => console.log("SW Registered")).catch(() => console.log("SW Failed"));
+            }
+
             initMap();
             renderList(spots);
-            
-            // Register service worker if available
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js').then(registration => {
-                    console.log('ServiceWorker registered with scope:', registration.scope);
-                    
-                    // Listen for controller change (new service worker activated)
-                    navigator.serviceWorker.addEventListener('controllerchange', () => {
-                        console.log('New service worker activated, reloading page...');
-                        window.location.reload();
-                    });
-                }).catch(error => {
-                    console.log('ServiceWorker registration failed:', error);
-                });
-            }
         }
         
         function getIconForCategory(cat) {
