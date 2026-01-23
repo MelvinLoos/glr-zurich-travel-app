@@ -13,6 +13,11 @@
     <meta name="application-name" content="GLR Zürich">
     <meta name="description" content="De ultieme gids voor GLR studenten in Zürich.">
 
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -27,8 +32,8 @@
                         'glr-border': '#333333',
                     },
                     fontFamily: {
-                        sans: ['ui-sans-serif', 'system-ui', 'sans-serif'],
-                        mono: ['ui-monospace', 'monospace'],
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
                     },
                     spacing: {
                         'safe-top': 'env(safe-area-inset-top)',
@@ -40,30 +45,36 @@
     </script>
     
     <!-- Leaflet CSS & JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
-    <!-- Styles -->
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Fonts -->
     <style>
-        /* Base */
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        /* Mobile Reset & Base Styles */
         body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #0F0F0F;
             color: #ffffff;
             -webkit-tap-highlight-color: transparent;
-            overscroll-behavior-y: none;
-            touch-action: pan-x pan-y;
+            overscroll-behavior-y: none; /* Disables pull-to-refresh */
+            touch-action: pan-x pan-y; /* Improves touch handling */
             user-select: none;
-            font-family: ui-sans-serif, system-ui, sans-serif;
         }
 
+        /* Allow text selection in descriptions */
         .selectable { user-select: text; }
 
-        /* Hide scrollbar */
+        /* Hide scrollbar but keep functionality */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Interactions */
-        .touch-manipulation { touch-action: manipulation; }
+        /* Smooth Interactions */
+        .touch-manipulation { touch-action: manipulation; } /* Removes 300ms click delay */
 
         .card-tech { 
             transition: transform 0.1s ease, background-color 0.2s ease, border-color 0.2s ease;
@@ -81,7 +92,7 @@
             box-shadow: 0 0 10px rgba(0, 215, 69, 0.4);
         }
 
-        /* Map */
+        /* Map Styling */
         .leaflet-popup-content-wrapper { 
             background-color: #1A1A1A; 
             color: white; 
@@ -89,27 +100,24 @@
             border-radius: 4px;
             padding: 0; 
         }
-        .leaflet-popup-content { margin: 10px; font-family: ui-sans-serif, system-ui, sans-serif; }
+        .leaflet-popup-content { margin: 10px; font-family: 'Plus Jakarta Sans', sans-serif; }
         .leaflet-popup-tip { background-color: #1A1A1A; border: 1px solid #00D745; }
         .leaflet-container { background: #0F0F0F; }
-        .leaflet-control-attribution { display: none; }
+        .leaflet-control-attribution { display: none; } /* Cleaner look */
 
-        /* Transitions */
+        /* Mobile View Transitions */
         #sidebar-container {
-            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); /* Snappy Bezier */
             will-change: transform;
         }
         .sidebar-hidden { transform: translateY(100%); }
         .sidebar-visible { transform: translateY(0); }
 
+        /* Modal Backdrop Blur */
         #modal-backdrop {
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
         }
-        
-        /* SVG Icons fill color fix */
-        .icon-fill-current { fill: currentColor; }
-        .icon-stroke-current { stroke: currentColor; }
     </style>
 </head>
 <body class="h-[100dvh] w-screen overflow-hidden flex flex-col md:flex-row bg-glr-dark relative">
@@ -118,26 +126,29 @@
     <div id="map-container" class="absolute inset-0 md:relative md:w-full md:h-full md:flex-1 bg-[#111] order-1 md:order-2 z-0 md:z-10 md:border-l border-glr-border shrink-0">
         <div id="map" class="w-full h-full opacity-90 transition-opacity duration-700"></div>
         
-        <!-- Overlay -->
+        <!-- Top Overlay Controls -->
         <div class="absolute top-safe-top left-0 w-full p-4 z-[400] flex justify-between pointer-events-none">
+             <!-- Status Badge -->
              <div class="bg-glr-surface/90 backdrop-blur border border-glr-border px-3 py-1.5 rounded-full text-xs font-mono text-gray-300 flex items-center gap-2 shadow-lg pointer-events-auto">
                 <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span> Live
              </div>
              
+             <!-- GPS Button -->
              <button onclick="locateUser()" class="bg-white text-black w-10 h-10 rounded-full flex items-center justify-center shadow-lg pointer-events-auto hover:bg-gray-200 active:scale-90 transition-transform">
-                 <!-- SVG Crosshairs -->
-                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+                 <i class="fas fa-crosshairs"></i>
              </button>
         </div>
     </div>
 
-    <!-- SIDEBAR -->
+    <!-- SIDEBAR / LIST CONTAINER -->
     <div id="sidebar-container" class="absolute inset-x-0 bottom-0 top-[15vh] pt-safe-top md:static md:inset-auto md:h-full flex flex-col w-full md:w-[450px] lg:w-[480px] bg-glr-dark z-20 shadow-[0_-5px_20px_rgba(0,0,0,0.5)] md:shadow-none md:border-r border-glr-border order-2 md:order-1 transition-transform duration-300 rounded-t-3xl md:rounded-none sidebar-visible border-t border-glr-border md:border-t-0">
         
+        <!-- Mobile Drag Handle -->
         <div class="md:hidden w-full pt-4 pb-2 bg-glr-dark rounded-t-3xl shrink-0 flex justify-center cursor-pointer touch-manipulation" onclick="toggleMobileView('hide')">
              <div class="w-12 h-1 bg-gray-700 rounded-full opacity-50"></div>
         </div>
 
+        <!-- HEADER & CATEGORIES -->
         <div class="bg-glr-dark shrink-0 z-20 pb-2 shadow-md border-b border-glr-border px-5">
             <div class="pt-2 md:pt-6 pb-2 md:pb-4 flex justify-between items-end">
                 <div>
@@ -148,49 +159,36 @@
                 </div>
             </div>
 
-            <!-- Categories with Inline SVG -->
+            <!-- Categories -->
             <div class="mt-2 flex overflow-x-auto no-scrollbar gap-3 pb-2 touch-pan-x">
                 <div onclick="filterSpots('all')" class="category-btn active flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </div>
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-globe"></i></div>
                     <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Alles</span>
                 </div>
                 <div onclick="filterSpots('water')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                    </div>
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-tint"></i></div>
                     <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Water</span>
                 </div>
                 <div onclick="filterSpots('chill')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all">
-                        <!-- Couch/Chair -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12V8H4v4M4 12v8h16v-8M4 12h16m-4-8v4M8 4v4" /></svg>
-                    </div>
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-couch"></i></div>
                     <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Relax</span>
                 </div>
                 <div onclick="filterSpots('photo')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    </div>
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-camera"></i></div>
                     <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Foto's</span>
                 </div>
                 <div onclick="filterSpots('tech')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                    </div>
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-building"></i></div>
                     <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Stad</span>
                 </div>
                 <div onclick="filterSpots('food')" class="category-btn flex flex-col items-center gap-2 cursor-pointer group shrink-0 w-16 touch-manipulation">
-                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                    </div>
+                    <div class="w-12 h-12 rounded-md bg-glr-surface border border-glr-border text-white flex items-center justify-center text-lg transition-all"><i class="fas fa-utensils"></i></div>
                     <span class="text-[10px] font-bold text-gray-400 font-mono uppercase tracking-wider">Eten</span>
                 </div>
             </div>
         </div>
 
-        <!-- LIST -->
+        <!-- SCROLLABLE LIST -->
         <div class="flex-1 overflow-y-auto no-scrollbar desktop-scroll bg-glr-dark pb-24 md:pb-0 relative">
             <div class="px-5 py-6 relative z-10">
                 <div class="flex items-center justify-between mb-4">
@@ -198,86 +196,123 @@
                 </div>
                 
                 <div id="cards-container" class="space-y-3">
-                    <!-- Cards -->
+                    <!-- Cards injected by JS -->
                 </div>
 
                 <div class="mt-8 mb-6 p-4 bg-glr-surface rounded-sm border-l-4 border-glr-neon relative overflow-hidden">
                     <div class="absolute right-0 top-0 p-2 opacity-10">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-glr-neon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <i class="fas fa-glass-water text-6xl text-glr-neon"></i>
                     </div>
-                    <p class="text-[10px] text-glr-neon font-mono font-bold uppercase mb-1">Tip</p>
-                    <p class="text-sm text-gray-300">Dorst? Vul je flesje bij een van de <strong class="text-white">1200+ fonteinen</strong>.</p>
+                    <p class="text-[10px] text-glr-neon font-mono font-bold uppercase mb-1">
+                        <i class="fas fa-info-circle mr-1"></i> Tip
+                    </p>
+                    <p class="text-sm text-gray-300">Dorst? Vul je flesje bij een van de <strong class="text-white">1200+ fonteinen</strong>. Het water is gratis, koud en lekker.</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MOBILE NAV -->
+    <!-- MOBILE BOTTOM NAV -->
     <div class="md:hidden fixed bottom-0 w-full bg-glr-surface/95 backdrop-blur border-t border-glr-border py-2 px-6 pb-safe-bottom flex justify-between items-center z-50 h-[80px]">
         <div onclick="switchTab(this, 'gids')" class="nav-item active flex flex-col items-center text-glr-neon cursor-pointer transition-all active:scale-95 touch-manipulation w-16">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+            <i class="fas fa-list text-xl mb-1"></i>
             <span class="text-[10px] font-bold font-mono uppercase">Lijst</span>
         </div>
         <div onclick="switchTab(this, 'kaart')" class="nav-item flex flex-col items-center text-gray-500 cursor-pointer transition-all active:scale-95 touch-manipulation w-16">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+            <i class="fas fa-map text-xl mb-1"></i>
             <span class="text-[10px] font-bold font-mono uppercase">Kaart</span>
         </div>
         <div onclick="switchTab(this, 'favoriet')" class="nav-item flex flex-col items-center text-gray-500 cursor-pointer transition-all active:scale-95 touch-manipulation w-16">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+            <i class="fas fa-heart text-xl mb-1"></i>
             <span class="text-[10px] font-bold font-mono uppercase">Favoriet</span>
         </div>
     </div>
 
-    <!-- MODAL -->
+    <!-- DETAIL MODAL & BACKDROP -->
     <div id="detail-modal" class="fixed z-50 inset-0 flex items-end md:items-center justify-center pointer-events-none">
+        
         <div onclick="closeModal()" id="modal-backdrop" class="absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 pointer-events-none"></div>
         
+        <!-- Modal Card -->
         <div id="modal-card" class="bg-glr-surface border border-glr-border w-full md:w-[500px] md:max-h-[85vh] rounded-t-xl md:rounded-sm shadow-2xl relative overflow-hidden flex flex-col h-[85vh] md:h-auto transform transition-all duration-300 translate-y-full md:translate-y-10 md:opacity-0 pointer-events-auto pb-safe-bottom">
+            
             <div class="md:hidden w-full pt-4 pb-2 bg-glr-surface shrink-0 cursor-pointer touch-manipulation" onclick="closeModal()">
                  <div class="w-12 h-1 bg-gray-700 rounded-full mx-auto"></div>
             </div>
+            
             <button onclick="closeModal()" class="absolute top-4 right-4 z-20 w-8 h-8 bg-black/50 backdrop-blur border border-white/10 rounded-sm flex items-center justify-center text-white hover:text-glr-neon hover:border-glr-neon transition-colors touch-manipulation">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                <i class="fas fa-times"></i>
             </button>
+
             <div id="modal-content" class="overflow-y-auto p-6 pt-0 md:pt-6 h-full text-gray-300"></div>
         </div>
     </div>
 
     <script>
-        // Fallback image
+        // --- CONFIG & DATA ---
         const fallbackImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%231A1A1A'/%3E%3Ctext x='50%25' y='50%25' font-family='monospace' font-weight='bold' font-size='48' fill='%2300D745' text-anchor='middle' dy='.3em'%3EGLR // ZRH%3C/text%3E%3C/svg%3E";
 
         const spots = [
-            { id: 1, category: 'chill', title: "Bürkliplatz", desc: "Mooi uitzichtpunt over het meer.", rating: 4.8, coords: [47.3661, 8.5416], image: "https://images.unsplash.com/photo-1551633518-8f85f16c75c8?w=800&q=80", tags: ["Uitzicht", "Water", "Relax"], color: "teal", price: "GRATIS", walkTime: "18 min" },
-            { id: 2, category: 'photo', title: "Lindenhof", desc: "Oud fort met het beste uitzicht voor selfies.", rating: 4.9, coords: [47.3730, 8.5412], image: "https://images.unsplash.com/photo-1510673825466-302bc330ab95?w=800&q=80", tags: ["Historie", "Foto", "Stad"], color: "blue", price: "GRATIS", walkTime: "10 min" },
-            { id: 3, category: 'tech', title: "Freitag Toren", desc: "Toren van 19 zeecontainers.", rating: 4.7, coords: [47.3856, 8.5195], image: "https://images.unsplash.com/photo-1560969568-d05545a999c6?w=800&q=80", tags: ["Design", "Eco", "Architectuur"], color: "gray", price: "GRATIS", walkTime: "30 min" },
-            { id: 4, category: 'tech', title: "Niederdorf", desc: "Gezellige oude straatjes met veel winkels.", rating: 4.5, coords: [47.3738, 8.5446], image: "https://images.unsplash.com/photo-1627918342261-55c5890e29b1?w=800&q=80", tags: ["Wandelen", "Winkels", "Sfeer"], color: "purple", price: "GRATIS", walkTime: "8 min" },
-            { id: 6, category: 'tech', title: "ETH Polyterrasse", desc: "Universiteitsterrein. Neem het rode treintje omhoog.", rating: 4.8, coords: [47.3762, 8.5480], image: "https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?w=800&q=80", tags: ["Uni", "Uitzicht", "Treintje"], color: "orange", price: "GRATIS", walkTime: "15 min" },
-            { id: 8, category: 'tech', title: "Europaallee", desc: "Modern stukje stad bij het spoor.", rating: 4.4, coords: [47.3791, 8.5319], image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80", tags: ["Modern", "Tech", "Winkels"], color: "indigo", price: "GRATIS", walkTime: "2 min" },
+            // CHILL (GRATIS)
+            { id: 1, category: 'chill', title: "Bürkliplatz", desc: "Mooi uitzichtpunt over het meer. Je ziet de Alpen en veel zwanen.", rating: 4.8, coords: [47.3661, 8.5416], image: "https://images.unsplash.com/photo-1551633518-8f85f16c75c8?w=800&q=80&grayscale", tags: ["Uitzicht", "Water", "Relax"], color: "teal", price: "GRATIS", walkTime: "18 min" },
+            
+            // FOTO (GRATIS)
+            { id: 2, category: 'photo', title: "Lindenhof", desc: "Oud fort met het beste uitzicht voor selfies.", rating: 4.9, coords: [47.3730, 8.5412], image: "https://images.unsplash.com/photo-1510673825466-302bc330ab95?w=800&q=80&grayscale", tags: ["Historie", "Foto", "Stad"], color: "blue", price: "GRATIS", walkTime: "10 min" },
+            
+            // TECH / STAD (GRATIS)
+            { id: 3, category: 'tech', title: "Freitag Toren", desc: "Toren van 19 zeecontainers. Duurzaam design icoon.", rating: 4.7, coords: [47.3856, 8.5195], image: "https://images.unsplash.com/photo-1560969568-d05545a999c6?w=800&q=80&grayscale", tags: ["Design", "Eco", "Architectuur"], color: "gray", price: "GRATIS", walkTime: "30 min (of 5 min trein)" },
+            { id: 4, category: 'tech', title: "Niederdorf", desc: "Gezellige oude straatjes met veel winkels.", rating: 4.5, coords: [47.3738, 8.5446], image: "https://images.unsplash.com/photo-1627918342261-55c5890e29b1?w=800&q=80&grayscale", tags: ["Wandelen", "Winkels", "Sfeer"], color: "purple", price: "GRATIS", walkTime: "8 min" },
+            { id: 6, category: 'tech', title: "ETH Polyterrasse", desc: "Universiteitsterrein. Neem het rode treintje omhoog.", rating: 4.8, coords: [47.3762, 8.5480], image: "https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?w=800&q=80&grayscale", tags: ["Uni", "Uitzicht", "Treintje"], color: "orange", price: "GRATIS", walkTime: "15 min" },
+            { id: 8, category: 'tech', title: "Europaallee", desc: "Modern stukje stad bij het spoor. Hier zit Google.", rating: 4.4, coords: [47.3791, 8.5319], image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80&grayscale", tags: ["Modern", "Tech", "Winkels"], color: "indigo", price: "GRATIS", walkTime: "2 min" },
+            
+            // WATER (GRATIS)
             { id: 9, category: 'water', title: "Alfred Escher Fontein", desc: "Handige fontein vlakbij de ingang van het station.", rating: 5.0, coords: [47.3770, 8.5400], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg/800px-Z%C3%BCrich_-_Bahnhofplatz_-_Alfred_Escher-Brunnen_IMG_1578.jpg", tags: ["Water", "HB", "Gratis"], color: "cyan", price: "GRATIS", walkTime: "1 min" },
             { id: 10, category: 'water', title: "Lindenhof Fontein", desc: "Oude fontein bovenop de heuvel.", rating: 4.8, coords: [47.3729, 8.5404], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG/800px-Z%C3%BCrich_-_Lindenhof_-_Hedwigbrunnen_2011-08-04_14-36-54.JPG", tags: ["Water", "Uitzicht", "Historie"], color: "cyan", price: "GRATIS", walkTime: "10 min" },
             { id: 11, category: 'water', title: "Münsterhof Fontein", desc: "Fontein midden in het oude centrum.", rating: 4.7, coords: [47.3701, 8.5410], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG/800px-Z%C3%BCrich_-_M%C3%BCnsterhof_-_Brunnen_2011-08-12_17-48-52.JPG", tags: ["Water", "Centrum", "Gratis"], color: "cyan", price: "GRATIS", walkTime: "12 min" },
             { id: 12, category: 'water', title: "Augustiner Fontein", desc: "Kleurrijke fontein in een smal straatje.", rating: 4.9, coords: [47.3723, 8.5385], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG/800px-Z%C3%BCrich_-_Augustinergasse_-_M%C3%BCnzplatz_IMG_2357.JPG", tags: ["Water", "Kleurrijk", "Foto"], color: "cyan", price: "GRATIS", walkTime: "10 min" },
-            { id: 13, category: 'tech', title: "Museum für Gestaltung", desc: "Hét designmuseum van Zwitserland.", rating: 4.8, coords: [47.3828, 8.5358], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg/800px-Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg", tags: ["Design", "Grafisch", "Museum"], color: "indigo", price: "GRATIS (met kaart)", walkTime: "7 min" },
-            { id: 5, category: 'food', title: "Sternen Grill", desc: "Beste plek voor een snelle Bratwurst.", rating: 4.6, coords: [47.3670, 8.5451], image: "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&q=80", tags: ["Eten", "Vlees", "Snel"], color: "red", price: "€€", walkTime: "18 min" },
-            { id: 7, category: 'food', title: "Hiltl", desc: "Oudste vegetarische restaurant ter wereld.", rating: 4.9, coords: [47.3730, 8.5367], image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80", tags: ["Vega", "Luxe", "Bio"], color: "green", price: "€€€", walkTime: "9 min" },
-            { id: 14, category: 'food', title: "Züri Bistro", desc: "Ideaal voor een snelle kebab of snack vlakbij het station.", rating: 4.5, coords: [47.3771, 8.5409], image: "https://images.unsplash.com/photo-1529042410759-befb72002dcd?w=800&q=80", tags: ["Kebab", "Snel", "Station"], color: "red", price: "€", walkTime: "0 min (In HB)" },
-            { id: 15, category: 'food', title: "Holy Cow! Gourmet Burger", desc: "Zwitserse kwaliteitsburgers.", rating: 4.6, coords: [47.3763, 8.5374], image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80", tags: ["Burger", "Vers", "Lokaal"], color: "red", price: "€€", walkTime: "5 min" },
-            { id: 16, category: 'food', title: "Piadina Bar", desc: "Italiaanse flatbread sandwiches.", rating: 4.7, coords: [47.3731, 8.5438], image: "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=800&q=80", tags: ["Italiaans", "Lunch", "Niederdorf"], color: "red", price: "€", walkTime: "10 min" },
-            { id: 17, category: 'food', title: "Pizza Nation", desc: "Geweldige pizza slices voor onderweg.", rating: 4.8, coords: [47.3732, 8.5439], image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80", tags: ["Pizza", "Slice", "Takeaway"], color: "red", price: "€", walkTime: "10 min" },
-            { id: 18, category: 'food', title: "Rheinfelder Bierhalle", desc: "Enorme Cordon Bleus.", rating: 4.5, coords: [47.3755, 8.5440], image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&q=80", tags: ["Zwitsers", "Groot", "Budget"], color: "red", price: "€€", walkTime: "8 min" },
-            { id: 19, category: 'food', title: "Raclette Factory", desc: "Echte Zwitserse raclette.", rating: 4.6, coords: [47.3724, 8.5438], image: "https://images.unsplash.com/photo-1549488344-c7079f856fdd?w=800&q=80", tags: ["Kaas", "Raclette", "Traditioneel"], color: "red", price: "€€", walkTime: "10 min" },
-            { id: 20, category: 'food', title: "ShopVille", desc: "Winkelcentrum onder het station.", rating: 4.4, coords: [47.3764, 8.5397], image: "https://images.unsplash.com/photo-1519671282429-b44660ead0a7?w=800&q=80", tags: ["Veel Keuze", "Overdekt", "Winkels"], color: "red", price: "€", walkTime: "0 min (Onder HB)" }
+            
+            // TECH (MUSEUM)
+            { id: 13, category: 'tech', title: "Museum für Gestaltung", desc: "Hét designmuseum van Zwitserland. Posters, graphics en objecten.", rating: 4.8, coords: [47.3828, 8.5358], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg/800px-Museum_f%C3%BCr_Gestaltung_Z%C3%BCrich_in_Z%C3%BCrich_Ausstellungsstrasse_60.jpg", tags: ["Design", "Grafisch", "Museum"], color: "indigo", price: "GRATIS (met kaart)", walkTime: "7 min" },
+            
+            // FOOD (BETAALD)
+            { id: 5, category: 'food', title: "Sternen Grill", desc: "Beste plek voor een snelle Bratwurst.", rating: 4.6, coords: [47.3670, 8.5451], image: "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&q=80&grayscale", tags: ["Eten", "Vlees", "Snel"], color: "red", price: "€€", walkTime: "18 min" },
+            { id: 7, category: 'food', title: "Hiltl", desc: "Oudste vegetarische restaurant ter wereld.", rating: 4.9, coords: [47.3730, 8.5367], image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80&grayscale", tags: ["Vega", "Luxe", "Bio"], color: "green", price: "€€€", walkTime: "9 min" },
+            { id: 14, category: 'food', title: "Züri Bistro", desc: "Ideaal voor een snelle kebab of snack vlakbij het station.", rating: 4.5, coords: [47.3771, 8.5409], image: "https://images.unsplash.com/photo-1529042410759-befb72002dcd?w=800&q=80&grayscale", tags: ["Kebab", "Snel", "Station"], color: "red", price: "€", walkTime: "0 min (In HB)" },
+            { id: 15, category: 'food', title: "Holy Cow! Gourmet Burger", desc: "Zwitserse kwaliteitsburgers met verse ingrediënten.", rating: 4.6, coords: [47.3763, 8.5374], image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80&grayscale", tags: ["Burger", "Vers", "Lokaal"], color: "red", price: "€€", walkTime: "5 min" },
+            { id: 16, category: 'food', title: "Piadina Bar", desc: "Italiaanse flatbread sandwiches in de Niederdorf.", rating: 4.7, coords: [47.3731, 8.5438], image: "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=800&q=80&grayscale", tags: ["Italiaans", "Lunch", "Niederdorf"], color: "red", price: "€", walkTime: "10 min" },
+            { id: 17, category: 'food', title: "Pizza Nation", desc: "Geweldige pizza slices voor onderweg.", rating: 4.8, coords: [47.3732, 8.5439], image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80&grayscale", tags: ["Pizza", "Slice", "Takeaway"], color: "red", price: "€", walkTime: "10 min" },
+            { id: 18, category: 'food', title: "Rheinfelder Bierhalle", desc: "Enorme Cordon Bleus voor een goede prijs.", rating: 4.5, coords: [47.3755, 8.5440], image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&q=80&grayscale", tags: ["Zwitsers", "Groot", "Budget"], color: "red", price: "€€", walkTime: "8 min" },
+            { id: 19, category: 'food', title: "Raclette Factory", desc: "De plek om echte Zwitserse raclette te proberen.", rating: 4.6, coords: [47.3724, 8.5438], image: "https://images.unsplash.com/photo-1549488344-c7079f856fdd?w=800&q=80&grayscale", tags: ["Kaas", "Raclette", "Traditioneel"], color: "red", price: "€€", walkTime: "10 min" },
+            { id: 20, category: 'food', title: "ShopVille", desc: "Winkelcentrum onder het station met talloze eetopties.", rating: 4.4, coords: [47.3764, 8.5397], image: "https://images.unsplash.com/photo-1519671282429-b44660ead0a7?w=800&q=80&grayscale", tags: ["Veel Keuze", "Overdekt", "Winkels"], color: "red", price: "€", walkTime: "0 min (Onder HB)" }
         ];
 
         const stationCoords = [47.3779, 8.5403];
         let map;
+        let markers = {};
 
+        // --- INIT ---
         function init() {
+            // Service Worker Logic Removed/Simplified inside HTML for clarity
+            // If you have sw.js, uncomment the registration part
+            if ('serviceWorker' in navigator) {
+               navigator.serviceWorker.register('sw.js').then(() => console.log("SW Registered")).catch(() => console.log("SW Failed"));
+            }
+
             initMap();
             renderList(spots);
         }
         
+        function getIconForCategory(cat) {
+            switch(cat) {
+                case 'water': return 'fa-tint';
+                case 'chill': return 'fa-couch';       
+                case 'photo': return 'fa-camera';      
+                case 'tech': return 'fa-building';     
+                case 'food': return 'fa-utensils';    
+                default: return 'fa-map-marker-alt';
+            }
+        }
+
         function initMap() {
             map = L.map('map', { 
                 zoomControl: false, 
@@ -289,35 +324,38 @@
                 attribution: '', subdomains: 'abcd', maxZoom: 19
             }).addTo(map);
 
+            // Zoom control
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
             const stationIcon = L.divIcon({
                 className: 'custom-icon',
                 html: `<div class="relative w-10 h-10 flex items-center justify-center">
                         <div class="absolute inset-0 bg-red-500 opacity-30 rounded-full animate-ping"></div>
-                        <div class="relative bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        </div>
+                        <div class="relative bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-lg"><i class="fas fa-train text-sm"></i></div>
                        </div>`,
                 iconSize: [40, 40],
                 iconAnchor: [20, 20]
             });
             L.marker(stationCoords, {icon: stationIcon}).addTo(map).bindPopup("<b>START</b><br>Zürich HB");
 
+            // Add all spots
             spots.forEach(spot => {
+                let iconClass = getIconForCategory(spot.category);
                 let borderColor = spot.category === 'water' ? 'border-cyan-500 text-cyan-500' : 'border-gray-500 text-gray-300';
                 if(spot.category !== 'water') borderColor += ' hover:border-glr-neon hover:text-glr-neon';
                 
                 const icon = L.divIcon({
                     className: 'custom-icon',
-                    html: `<div class="bg-glr-surface ${borderColor} w-8 h-8 rounded-xl flex items-center justify-center border hover:bg-black transition-all shadow-lg group">
-                            <div class="w-2 h-2 bg-current rounded-full"></div>
+                    html: `<div class="bg-glr-surface ${borderColor} w-9 h-9 rounded-xl flex items-center justify-center border hover:bg-black transition-all shadow-lg group">
+                            <i class="fas ${iconClass} text-sm group-hover:scale-110 transition-transform"></i>
                            </div>`,
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 32],
-                    popupAnchor: [0, -32]
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 36],
+                    popupAnchor: [0, -36]
                 });
-                L.marker(spot.coords, {icon: icon}).addTo(map).on('click', () => openModal(spot.id));
+                
+                const marker = L.marker(spot.coords, {icon: icon}).addTo(map).on('click', () => openModal(spot.id));
+                markers[spot.id] = marker;
             });
         }
 
@@ -337,8 +375,8 @@
                     <div class="flex-1 flex flex-col justify-center">
                         <div class="flex justify-between items-start mb-1">
                             <h3 class="font-bold text-white text-base leading-tight font-mono uppercase tracking-wide group-hover:text-glr-neon transition-colors">${spot.title}</h3>
-                            <button onclick="event.stopPropagation();" class="w-8 h-8 flex items-center justify-center rounded-sm hover:bg-white/10 text-gray-500 hover:text-glr-neon transition-colors touch-manipulation">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                            <button onclick="event.stopPropagation(); toggleHeart(this)" class="w-8 h-8 flex items-center justify-center rounded-sm hover:bg-white/10 text-gray-500 hover:text-glr-neon transition-colors touch-manipulation">
+                                <i class="fas fa-heart"></i>
                             </button>
                         </div>
                         <p class="text-xs text-gray-400 mb-2 line-clamp-1 font-mono selectable">${spot.desc}</p>
@@ -347,7 +385,7 @@
                                 ${spot.tags.slice(0, 2).map(tag => `<span class="text-[9px] font-bold bg-black text-gray-300 px-2 py-1 rounded-sm border border-glr-border uppercase tracking-wider">${tag}</span>`).join('')}
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-bold text-gray-400 flex items-center gap-1">${spot.walkTime}</span>
+                                <span class="text-[10px] font-bold text-gray-400 flex items-center gap-1"><i class="fas fa-walking"></i> ${spot.walkTime}</span>
                                 <span class="text-[10px] font-bold ${spot.price === 'GRATIS' ? 'text-glr-neon' : 'text-white'}">${spot.price}</span>
                             </div>
                         </div>
@@ -357,11 +395,23 @@
             });
         }
 
+        // --- INTERACTIONS ---
+
         function selectSpotFromList(id) {
             const spot = spots.find(s => s.id === id);
             if (!spot) return;
+
+            // 1. Open Modal
             openModal(id);
-            map.flyTo(spot.coords, 17, { animate: true, duration: 1.5 });
+            
+            // 2. Hide Sidebar temporarily on mobile to show the jump logic
+            // (Optional: We keep sidebar visible and modal opens over it)
+            
+            // 3. Zoom Map to location
+            map.flyTo(spot.coords, 17, {
+                animate: true,
+                duration: 1.5
+            });
         }
 
         function openModal(id) {
@@ -376,14 +426,14 @@
                     <img src="${spot.image}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src=fallbackImage;">
                     <div class="absolute inset-0 bg-gradient-to-t from-glr-dark to-transparent"></div>
                     <div class="absolute bottom-0 left-0 bg-glr-neon text-black px-3 py-1 text-xs font-bold font-mono uppercase">
-                        ${spot.walkTime} vanaf HB
+                        <i class="fas fa-walking"></i> ${spot.walkTime} vanaf HB
                     </div>
                 </div>
                 <div class="flex justify-between items-start mb-2">
                     <h2 class="text-2xl font-black text-white leading-tight pr-4 font-mono uppercase select-all">${spot.title}</h2>
                 </div>
                 <div class="flex items-center gap-4 mb-6 text-xs text-gray-400 font-mono uppercase tracking-widest border-b border-glr-border pb-4">
-                    <span class="text-glr-neon">★ ${spot.rating}</span>
+                    <span class="text-glr-neon"><i class="fas fa-star"></i> ${spot.rating}</span>
                     <span>|</span>
                     <span>${spot.category}</span>
                     <span>|</span>
@@ -391,20 +441,36 @@
                 </div>
                 <p class="text-gray-300 leading-relaxed mb-6 text-sm md:text-base font-sans selectable">${spot.desc}</p>
                 <div class="flex flex-wrap gap-2 mb-8">
-                    ${spot.tags.map(tag => `<span class="bg-black text-glr-neon px-3 py-1.5 rounded-sm text-xs font-bold border border-glr-border flex items-center gap-1 font-mono uppercase"># ${tag}</span>`).join('')}
+                    ${spot.tags.map(tag => `<span class="bg-black text-glr-neon px-3 py-1.5 rounded-sm text-xs font-bold border border-glr-border flex items-center gap-1 font-mono uppercase"><i class="fas fa-tag text-[8px]"></i> ${tag}</span>`).join('')}
                 </div>
                 <button onclick="window.open('${mapsUrl}', '_blank')" class="w-full bg-glr-neon text-black font-black py-4 rounded-sm shadow-[0_0_20px_rgba(0,215,69,0.3)] hover:shadow-[0_0_30px_rgba(0,215,69,0.6)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 uppercase tracking-wider font-mono text-sm border border-glr-neon touch-manipulation">
-                    Route in Maps
+                    <i class="fas fa-location-arrow"></i> Route in Maps
                 </button>
             `;
 
-            document.getElementById('modal-backdrop').classList.remove('opacity-0', 'pointer-events-none');
-            document.getElementById('modal-card').classList.remove('translate-y-full', 'md:translate-y-10', 'md:opacity-0');
+            const backdrop = document.getElementById('modal-backdrop');
+            const card = document.getElementById('modal-card');
+            
+            backdrop.classList.remove('opacity-0', 'pointer-events-none');
+            card.classList.remove('translate-y-full', 'md:translate-y-10', 'md:opacity-0');
         }
 
         function closeModal() {
-            document.getElementById('modal-backdrop').classList.add('opacity-0', 'pointer-events-none');
-            document.getElementById('modal-card').classList.add('translate-y-full', 'md:translate-y-10', 'md:opacity-0');
+            const backdrop = document.getElementById('modal-backdrop');
+            const card = document.getElementById('modal-card');
+            backdrop.classList.add('opacity-0', 'pointer-events-none');
+            card.classList.add('translate-y-full', 'md:translate-y-10', 'md:opacity-0');
+        }
+
+        function toggleHeart(btn) {
+            // Visual toggle only for demo
+            if (btn.classList.contains('text-glr-neon')) {
+                btn.classList.remove('text-glr-neon', 'fas');
+                btn.classList.add('text-gray-500', 'far');
+            } else {
+                btn.classList.add('text-glr-neon', 'fas');
+                btn.classList.remove('text-gray-500', 'far');
+            }
         }
 
         function filterSpots(cat) {
@@ -419,6 +485,7 @@
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
                     
+                    // Add/Move user marker
                     if(!window.userMarker) {
                         const userIcon = L.divIcon({
                             className: 'user-marker',
@@ -429,14 +496,16 @@
                     } else {
                         window.userMarker.setLatLng([lat, lng]);
                     }
+                    
                     map.flyTo([lat, lng], 16);
                 });
             } else {
-                alert("Geolocatie wordt niet ondersteund.");
+                alert("Geolocatie wordt niet ondersteund door deze browser.");
             }
         }
 
         function switchTab(el, tabName) {
+            // 1. Update UI Buttons
             document.querySelectorAll('.nav-item').forEach(btn => {
                 btn.classList.remove('active', 'text-glr-neon');
                 btn.classList.add('text-gray-500');
@@ -444,6 +513,7 @@
             el.classList.add('active', 'text-glr-neon');
             el.classList.remove('text-gray-500');
 
+            // 2. Logic
             const sidebar = document.getElementById('sidebar-container');
             
             if (tabName === 'gids') {
@@ -453,7 +523,7 @@
                 sidebar.classList.add('sidebar-visible');
             } 
             else if (tabName === 'favoriet') {
-                renderList(spots.slice(0, 3)); 
+                renderList(spots.slice(0, 3)); // Demo favorieten
                 document.getElementById('list-title').textContent = "Favorieten";
                 sidebar.classList.remove('sidebar-hidden');
                 sidebar.classList.add('sidebar-visible');
@@ -461,21 +531,13 @@
             else if (tabName === 'kaart') {
                 sidebar.classList.remove('sidebar-visible');
                 sidebar.classList.add('sidebar-hidden');
+                
+                // IMPORTANT: Invalidate map size after transition to ensure full tiles
                 setTimeout(() => { map.invalidateSize(); }, 350);
             }
         }
-        
-        function toggleMobileView(state) {
-             const sidebar = document.getElementById('sidebar-container');
-             if(state === 'hide'){
-                 sidebar.classList.remove('sidebar-visible');
-                 sidebar.classList.add('sidebar-hidden');
-             } else {
-                 sidebar.classList.remove('sidebar-hidden');
-                 sidebar.classList.add('sidebar-visible');
-             }
-        }
 
+        // Fix viewport height for mobile browsers
         function setVh() {
             let vh = window.innerHeight * 0.01;
             document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -484,6 +546,7 @@
         setVh();
 
         init();
+        // Resize listener to close modal on desktop resize
         window.addEventListener('resize', () => closeModal());
     </script>
 </body>
